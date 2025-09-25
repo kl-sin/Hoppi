@@ -1,7 +1,7 @@
+<img src="assets/Hoppi_3dText.png" alt="Hoppi Logo" width="600">
+
 # Hoppi
 AI-powered app that turns the real world into your playground!
-
-<img src="assets/Hoppi_3dText.png" alt="Hoppi Logo" width="600">
 
 <img src="assets/AppMockup.png" alt="App Mockup" width="200">
 
