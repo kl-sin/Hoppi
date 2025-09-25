@@ -5,6 +5,8 @@ AI-powered app that turns the real world into your playground!
 
 <img src="assets/AppMockup.png" alt="App Mockup" width="200">
 
+<img src="assets/LandingPage_v1.png" alt="Landing Page" width="400">
+
 ## ✨ What is Hoppi?
 Hoppi encourages people to:
 - 🌍 Go outside and interact with real places  
@@ -41,3 +43,10 @@ venv\Scripts\activate      # Windows
 
 # Install dependencies (when requirements.txt is available)
 pip install -r requirements.txt
+```
+
+### Running the App
+```bash
+# Run the main application
+python main.py
+```
