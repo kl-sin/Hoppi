@@ -52,6 +52,34 @@
             display: none;
         }
 
+        .location-info h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        #locationStatus {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        #locationText {
+            font-family: 'Courier New', monospace;
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        #getLocationBtn {
+            background: #28a745;
+            font-size: 0.9em;
+            padding: 10px 20px;
+        }
+
+        #getLocationBtn:hover {
+            background: #218838;
+        }
+
         .task-container {
             background: #e8f4fd;
             padding: 25px;
@@ -184,7 +212,9 @@
         
         <div class="location-info" id="locationInfo">
             <h3>📍 Your Location</h3>
-            <p id="locationText">Getting your location...</p>
+            <p id="locationStatus">⏳ Locating...</p>
+            <p id="locationText" style="display: none;"></p>
+            <button class="btn" id="getLocationBtn" onclick="getLocationManually()" style="margin-top: 10px;">📍 Get My Location</button>
         </div>
 
         <div class="loading" id="loading">
@@ -252,30 +282,67 @@
         let videoStream = null;
         let audioStream = null;
 
-        // Get user's location
+        // Get user's location with enhanced error handling
         function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    function(position) {
-                        currentLocation = {
-                            latitude: position.coords.latitude,
-                            longitude: position.coords.longitude
-                        };
-                        
-                        document.getElementById('locationText').textContent = 
-                            `Lat: ${currentLocation.latitude.toFixed(4)}, Lon: ${currentLocation.longitude.toFixed(4)}`;
-                        document.getElementById('locationInfo').style.display = 'block';
-                        
-                        generateTask();
-                    },
-                    function(error) {
-                        showStatus('Unable to get your location. Please enable location access and refresh the page.', 'error');
-                        console.error('Geolocation error:', error);
-                    }
-                );
-            } else {
+            const status = document.getElementById('locationStatus');
+            const locationText = document.getElementById('locationText');
+            const locationInfo = document.getElementById('locationInfo');
+            
+            if (!navigator.geolocation) {
+                status.textContent = "❌ Geolocation is not supported by this browser.";
                 showStatus('Geolocation is not supported by this browser.', 'error');
+                return;
             }
+
+            status.textContent = "⏳ Locating...";
+            locationInfo.style.display = 'block';
+
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    currentLocation = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    };
+                    
+                    status.textContent = "✅ Location found!";
+                    locationText.textContent = `Latitude: ${currentLocation.latitude.toFixed(6)}, Longitude: ${currentLocation.longitude.toFixed(6)}`;
+                    locationText.style.display = 'block';
+                    
+                    showStatus('Location detected successfully!', 'success');
+                    generateTask();
+                },
+                function(error) {
+                    let errorMessage = "❌ Error: ";
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage += "Location access denied by user.";
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage += "Location information is unavailable.";
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage += "Location request timed out.";
+                            break;
+                        default:
+                            errorMessage += "An unknown error occurred.";
+                            break;
+                    }
+                    
+                    status.textContent = errorMessage;
+                    showStatus('Unable to get your location. Please enable location access and try again.', 'error');
+                    console.error('Geolocation error:', error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 300000
+                }
+            );
+        }
+
+        // Manual location button handler
+        function getLocationManually() {
+            getLocation();
         }
 
         // Generate task based on location
