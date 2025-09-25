@@ -4,11 +4,10 @@
 AI-powered app that turns the real world into your playground!
 
 <p align="center">
-  <img src="assets/AppMockup.png" alt="App Mockup" width="200" style="vertical-align: top;"/>
+  <img src="assets/AppMockup.png" alt="App Mockup" width="250" style="vertical-align: top;"/>
   <span style="display:inline-block; width:60px;"></span>
-  <img src="assets/LandingPage_v1.png" alt="Landing Page" height="400" style="vertical-align: top;"/>
+  <img src="assets/LandingPage_v1.png" alt="Landing Page" width="500" style="vertical-align: top;"/>
 </p>
-
 
 ## ✨ What is Hoppi?
 Hoppi encourages people to:
@@ -50,6 +49,8 @@ pip install -r requirements.txt
 
 ### Running the App
 ```bash
-# Run the main application
-python main.py
+# Run the Flask application
+python app.py
 ```
+
+Then open your browser and go to `http://localhost:5000`

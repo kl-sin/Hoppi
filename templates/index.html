@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hoppi - Your Adventure Awaits!</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 3em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.2em;
+        }
+
+        .location-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .task-container {
+            background: #e8f4fd;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border-left: 5px solid #667eea;
+            display: none;
+        }
+
+        .task-text {
+            font-size: 1.3em;
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .upload-section {
+            margin: 30px 0;
+            display: none;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover {
+            background: #f0f4ff;
+            border-color: #5a6fd8;
+        }
+
+        .upload-area.dragover {
+            background: #e8f4fd;
+            border-color: #4c63d2;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🎯 Hoppi</div>
+        <div class="subtitle">Turn the real world into your playground!</div>
+        
+        <div class="location-info" id="locationInfo">
+            <h3>📍 Your Location</h3>
+            <p id="locationText">Getting your location...</p>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Generating your adventure task...</p>
+        </div>
+
+        <div class="task-container" id="taskContainer">
+            <h3>🎯 Your Adventure Task</h3>
+            <div class="task-text" id="taskText"></div>
+            <button class="btn" id="newTaskBtn">Get New Task</button>
+        </div>
+
+        <div class="upload-section" id="uploadSection">
+            <h3>📸 Capture Your Moment</h3>
+            <div class="upload-area" id="uploadArea">
+                <p>📷 Click here or drag & drop your image</p>
+                <input type="file" id="imageInput" accept="image/*" style="display: none;">
+            </div>
+            <div id="imagePreview"></div>
+            <div id="actionButtons" style="display: none;">
+                <button class="btn" id="downloadBtn">💾 Download</button>
+                <button class="btn btn-secondary" id="shareBtn">📤 Share</button>
+            </div>
+        </div>
+
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        let currentLocation = null;
+        let currentTask = null;
+        let uploadedImage = null;
+
+        // Get user's location
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        currentLocation = {
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude
+                        };
+                        
+                        document.getElementById('locationText').textContent = 
+                            `Lat: ${currentLocation.latitude.toFixed(4)}, Lon: ${currentLocation.longitude.toFixed(4)}`;
+                        document.getElementById('locationInfo').style.display = 'block';
+                        
+                        generateTask();
+                    },
+                    function(error) {
+                        showStatus('Unable to get your location. Please enable location access and refresh the page.', 'error');
+                        console.error('Geolocation error:', error);
+                    }
+                );
+            } else {
+                showStatus('Geolocation is not supported by this browser.', 'error');
+            }
+        }
+
+        // Generate task based on location
+        async function generateTask() {
+            if (!currentLocation) return;
+
+            showLoading(true);
+            
+            try {
+                const response = await fetch('/task', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(currentLocation)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentTask = data;
+                    document.getElementById('taskText').textContent = data.task;
+                    document.getElementById('taskContainer').style.display = 'block';
+                    document.getElementById('uploadSection').style.display = 'block';
+                    showStatus(`Task generated for ${data.location_type} location!`, 'success');
+                } else {
+                    showStatus(data.error || 'Failed to generate task', 'error');
+                }
+            } catch (error) {
+                showStatus('Error generating task: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Show/hide loading spinner
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // Show status message
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+            
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 5000);
+        }
+
+        // Handle image upload
+        function setupImageUpload() {
+            const uploadArea = document.getElementById('uploadArea');
+            const imageInput = document.getElementById('imageInput');
+            const imagePreview = document.getElementById('imagePreview');
+            const actionButtons = document.getElementById('actionButtons');
+
+            // Click to upload
+            uploadArea.addEventListener('click', () => imageInput.click());
+
+            // Drag and drop
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleImageFile(files[0]);
+                }
+            });
+
+            // File input change
+            imageInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleImageFile(e.target.files[0]);
+                }
+            });
+        }
+
+        // Handle image file
+        function handleImageFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showStatus('Please select an image file.', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.className = 'image-preview';
+                img.style.display = 'block';
+                
+                document.getElementById('imagePreview').innerHTML = '';
+                document.getElementById('imagePreview').appendChild(img);
+                document.getElementById('actionButtons').style.display = 'block';
+                
+                uploadedImage = file;
+                showStatus('Image ready! You can now download or share it.', 'success');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Download image
+        function downloadImage() {
+            if (!uploadedImage) return;
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(uploadedImage);
+            link.download = `hoppi-moment-${Date.now()}.jpg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showStatus('Image downloaded successfully!', 'success');
+        }
+
+        // Share image (dummy function)
+        function shareImage() {
+            showStatus('Share feature coming soon! For now, you can download your image.', 'success');
+        }
+
+        // Event listeners
+        document.getElementById('newTaskBtn').addEventListener('click', generateTask);
+        document.getElementById('downloadBtn').addEventListener('click', downloadImage);
+        document.getElementById('shareBtn').addEventListener('click', shareImage);
+
+        // Initialize
+        setupImageUpload();
+        getLocation();
+    </script>
+</body>
+</html>
