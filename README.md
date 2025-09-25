@@ -3,6 +3,9 @@ AI-powered app that turns the real world into your playground!
 
 ![Hoppi Logo](assets/Hoppi_3dText.png)
 
+![App Mockup](assets/AppMockup.png)
+
+
 ---
 
 ## ✨ What is Hoppi?
