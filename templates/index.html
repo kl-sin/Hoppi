@@ -200,11 +200,39 @@
 
         <div class="upload-section" id="uploadSection">
             <h3>📸 Capture Your Moment</h3>
-            <div class="upload-area" id="uploadArea">
-                <p>📷 Click here or drag & drop your image</p>
-                <input type="file" id="imageInput" accept="image/*" style="display: none;">
+            
+            <!-- Media Type Selection -->
+            <div class="media-type-selector" style="margin: 20px 0;">
+                <button class="btn" id="photoBtn" onclick="setMediaType('photo')">📷 Photo</button>
+                <button class="btn btn-secondary" id="videoBtn" onclick="setMediaType('video')">📹 Video</button>
+                <button class="btn btn-secondary" id="audioBtn" onclick="setMediaType('audio')">🎤 Audio</button>
             </div>
-            <div id="imagePreview"></div>
+
+            <!-- Photo Upload -->
+            <div class="upload-area" id="uploadArea">
+                <p id="uploadText">📷 Click here or drag & drop your image</p>
+                <input type="file" id="mediaInput" accept="image/*" style="display: none;">
+            </div>
+
+            <!-- Video Recording -->
+            <div id="videoSection" style="display: none;">
+                <video id="videoPreview" width="100%" height="300" style="border-radius: 10px; margin: 10px 0;"></video>
+                <div style="text-align: center; margin: 20px 0;">
+                    <button class="btn" id="startVideoBtn">🎬 Start Recording</button>
+                    <button class="btn btn-secondary" id="stopVideoBtn" style="display: none;">⏹️ Stop Recording</button>
+                </div>
+            </div>
+
+            <!-- Audio Recording -->
+            <div id="audioSection" style="display: none;">
+                <div style="text-align: center; margin: 20px 0;">
+                    <button class="btn" id="startAudioBtn">🎤 Start Recording</button>
+                    <button class="btn btn-secondary" id="stopAudioBtn" style="display: none;">⏹️ Stop Recording</button>
+                </div>
+                <audio id="audioPreview" controls style="width: 100%; margin: 10px 0; display: none;"></audio>
+            </div>
+
+            <div id="mediaPreview"></div>
             <div id="actionButtons" style="display: none;">
                 <button class="btn" id="downloadBtn">💾 Download</button>
                 <button class="btn btn-secondary" id="shareBtn">📤 Share</button>
@@ -217,7 +245,12 @@
     <script>
         let currentLocation = null;
         let currentTask = null;
-        let uploadedImage = null;
+        let uploadedMedia = null;
+        let currentMediaType = 'photo';
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let videoStream = null;
+        let audioStream = null;
 
         // Get user's location
         function getLocation() {
@@ -295,15 +328,45 @@
             }, 5000);
         }
 
-        // Handle image upload
-        function setupImageUpload() {
+        // Set media type
+        function setMediaType(type) {
+            currentMediaType = type;
+            
+            // Update button styles
+            document.getElementById('photoBtn').className = type === 'photo' ? 'btn' : 'btn btn-secondary';
+            document.getElementById('videoBtn').className = type === 'video' ? 'btn' : 'btn btn-secondary';
+            document.getElementById('audioBtn').className = type === 'audio' ? 'btn' : 'btn btn-secondary';
+            
+            // Show/hide sections
+            document.getElementById('uploadArea').style.display = type === 'photo' ? 'block' : 'none';
+            document.getElementById('videoSection').style.display = type === 'video' ? 'block' : 'none';
+            document.getElementById('audioSection').style.display = type === 'audio' ? 'block' : 'none';
+            
+            // Update upload text
+            const uploadText = document.getElementById('uploadText');
+            const mediaInput = document.getElementById('mediaInput');
+            
+            if (type === 'photo') {
+                uploadText.textContent = '📷 Click here or drag & drop your image';
+                mediaInput.accept = 'image/*';
+            } else if (type === 'video') {
+                uploadText.textContent = '📹 Click here or drag & drop your video';
+                mediaInput.accept = 'video/*';
+            } else if (type === 'audio') {
+                uploadText.textContent = '🎤 Click here or drag & drop your audio';
+                mediaInput.accept = 'audio/*';
+            }
+        }
+
+        // Handle media upload
+        function setupMediaUpload() {
             const uploadArea = document.getElementById('uploadArea');
-            const imageInput = document.getElementById('imageInput');
-            const imagePreview = document.getElementById('imagePreview');
+            const mediaInput = document.getElementById('mediaInput');
+            const mediaPreview = document.getElementById('mediaPreview');
             const actionButtons = document.getElementById('actionButtons');
 
             // Click to upload
-            uploadArea.addEventListener('click', () => imageInput.click());
+            uploadArea.addEventListener('click', () => mediaInput.click());
 
             // Drag and drop
             uploadArea.addEventListener('dragover', (e) => {
@@ -320,68 +383,208 @@
                 uploadArea.classList.remove('dragover');
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
-                    handleImageFile(files[0]);
+                    handleMediaFile(files[0]);
                 }
             });
 
             // File input change
-            imageInput.addEventListener('change', (e) => {
+            mediaInput.addEventListener('change', (e) => {
                 if (e.target.files.length > 0) {
-                    handleImageFile(e.target.files[0]);
+                    handleMediaFile(e.target.files[0]);
                 }
             });
         }
 
-        // Handle image file
-        function handleImageFile(file) {
-            if (!file.type.startsWith('image/')) {
-                showStatus('Please select an image file.', 'error');
+        // Handle media file
+        function handleMediaFile(file) {
+            const validTypes = {
+                'photo': ['image/'],
+                'video': ['video/'],
+                'audio': ['audio/']
+            };
+            
+            const isValidType = validTypes[currentMediaType].some(type => file.type.startsWith(type));
+            
+            if (!isValidType) {
+                showStatus(`Please select a valid ${currentMediaType} file.`, 'error');
                 return;
             }
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                const img = document.createElement('img');
-                img.src = e.target.result;
-                img.className = 'image-preview';
-                img.style.display = 'block';
+                const mediaPreview = document.getElementById('mediaPreview');
+                mediaPreview.innerHTML = '';
                 
-                document.getElementById('imagePreview').innerHTML = '';
-                document.getElementById('imagePreview').appendChild(img);
+                if (currentMediaType === 'photo') {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'image-preview';
+                    img.style.display = 'block';
+                    mediaPreview.appendChild(img);
+                } else if (currentMediaType === 'video') {
+                    const video = document.createElement('video');
+                    video.src = e.target.result;
+                    video.controls = true;
+                    video.style.width = '100%';
+                    video.style.maxHeight = '300px';
+                    video.style.borderRadius = '10px';
+                    mediaPreview.appendChild(video);
+                } else if (currentMediaType === 'audio') {
+                    const audio = document.createElement('audio');
+                    audio.src = e.target.result;
+                    audio.controls = true;
+                    audio.style.width = '100%';
+                    mediaPreview.appendChild(audio);
+                }
+                
                 document.getElementById('actionButtons').style.display = 'block';
-                
-                uploadedImage = file;
-                showStatus('Image ready! You can now download or share it.', 'success');
+                uploadedMedia = file;
+                showStatus(`${currentMediaType.charAt(0).toUpperCase() + currentMediaType.slice(1)} ready! You can now download or share it.`, 'success');
             };
             reader.readAsDataURL(file);
         }
 
-        // Download image
-        function downloadImage() {
-            if (!uploadedImage) return;
+        // Video recording functions
+        async function startVideoRecording() {
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                const videoPreview = document.getElementById('videoPreview');
+                videoPreview.srcObject = videoStream;
+                
+                mediaRecorder = new MediaRecorder(videoStream);
+                recordedChunks = [];
+                
+                mediaRecorder.ondataavailable = function(event) {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = function() {
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    const video = document.createElement('video');
+                    video.src = url;
+                    video.controls = true;
+                    video.style.width = '100%';
+                    video.style.maxHeight = '300px';
+                    video.style.borderRadius = '10px';
+                    
+                    document.getElementById('mediaPreview').innerHTML = '';
+                    document.getElementById('mediaPreview').appendChild(video);
+                    document.getElementById('actionButtons').style.display = 'block';
+                    
+                    uploadedMedia = blob;
+                    showStatus('Video recorded! You can now download or share it.', 'success');
+                };
+                
+                mediaRecorder.start();
+                document.getElementById('startVideoBtn').style.display = 'none';
+                document.getElementById('stopVideoBtn').style.display = 'inline-block';
+                
+            } catch (error) {
+                showStatus('Error accessing camera: ' + error.message, 'error');
+            }
+        }
+
+        function stopVideoRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                videoStream.getTracks().forEach(track => track.stop());
+                
+                document.getElementById('startVideoBtn').style.display = 'inline-block';
+                document.getElementById('stopVideoBtn').style.display = 'none';
+            }
+        }
+
+        // Audio recording functions
+        async function startAudioRecording() {
+            try {
+                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                mediaRecorder = new MediaRecorder(audioStream);
+                recordedChunks = [];
+                
+                mediaRecorder.ondataavailable = function(event) {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = function() {
+                    const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    const audio = document.createElement('audio');
+                    audio.src = url;
+                    audio.controls = true;
+                    audio.style.width = '100%';
+                    
+                    document.getElementById('mediaPreview').innerHTML = '';
+                    document.getElementById('mediaPreview').appendChild(audio);
+                    document.getElementById('actionButtons').style.display = 'block';
+                    
+                    uploadedMedia = blob;
+                    showStatus('Audio recorded! You can now download or share it.', 'success');
+                };
+                
+                mediaRecorder.start();
+                document.getElementById('startAudioBtn').style.display = 'none';
+                document.getElementById('stopAudioBtn').style.display = 'inline-block';
+                
+            } catch (error) {
+                showStatus('Error accessing microphone: ' + error.message, 'error');
+            }
+        }
+
+        function stopAudioRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                audioStream.getTracks().forEach(track => track.stop());
+                
+                document.getElementById('startAudioBtn').style.display = 'inline-block';
+                document.getElementById('stopAudioBtn').style.display = 'none';
+            }
+        }
+
+        // Download media
+        function downloadMedia() {
+            if (!uploadedMedia) return;
             
             const link = document.createElement('a');
-            link.href = URL.createObjectURL(uploadedImage);
-            link.download = `hoppi-moment-${Date.now()}.jpg`;
+            link.href = URL.createObjectURL(uploadedMedia);
+            
+            const extensions = {
+                'photo': 'jpg',
+                'video': 'webm',
+                'audio': 'webm'
+            };
+            
+            link.download = `hoppi-${currentMediaType}-${Date.now()}.${extensions[currentMediaType]}`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             
-            showStatus('Image downloaded successfully!', 'success');
+            showStatus(`${currentMediaType.charAt(0).toUpperCase() + currentMediaType.slice(1)} downloaded successfully!`, 'success');
         }
 
-        // Share image (dummy function)
-        function shareImage() {
-            showStatus('Share feature coming soon! For now, you can download your image.', 'success');
+        // Share media (dummy function)
+        function shareMedia() {
+            showStatus('Share feature coming soon! For now, you can download your media.', 'success');
         }
 
         // Event listeners
         document.getElementById('newTaskBtn').addEventListener('click', generateTask);
-        document.getElementById('downloadBtn').addEventListener('click', downloadImage);
-        document.getElementById('shareBtn').addEventListener('click', shareImage);
+        document.getElementById('downloadBtn').addEventListener('click', downloadMedia);
+        document.getElementById('shareBtn').addEventListener('click', shareMedia);
+        document.getElementById('startVideoBtn').addEventListener('click', startVideoRecording);
+        document.getElementById('stopVideoBtn').addEventListener('click', stopVideoRecording);
+        document.getElementById('startAudioBtn').addEventListener('click', startAudioRecording);
+        document.getElementById('stopAudioBtn').addEventListener('click', stopAudioRecording);
 
         // Initialize
-        setupImageUpload();
+        setupMediaUpload();
         getLocation();
     </script>
 </body>

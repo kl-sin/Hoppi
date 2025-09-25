@@ -10,42 +10,67 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Create uploads directory if it doesn't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Location-based tasks
+# Location-based tasks with social and creative elements
 TASKS_BY_LOCATION = {
     'park': [
-        "Find the most interesting tree and take a selfie with it!",
-        "Count how many different bird species you can spot in 5 minutes.",
-        "Find a perfect spot for a picnic and document it.",
-        "Take a photo of the most colorful flower you can find.",
-        "Find a bench and write a haiku about the view."
+        "🌳 Hug a tree and ask a stranger or friend to take your photo!",
+        "🍃 Create a beautiful pattern using fallen leaves and photograph it.",
+        "🎵 Find a stranger and ask them to sing a simple beat with you (clap, snap, or hum).",
+        "📹 Record a 30-second video of you doing your best tree impression.",
+        "🌿 Collect 5 different types of leaves and arrange them artistically for a photo.",
+        "🎶 Find someone walking their dog and ask them to join you in a silly song about their pet.",
+        "📱 Take a video of you teaching a stranger how to identify 3 different trees.",
+        "🌺 Create a flower crown and ask someone to take a photo of you wearing it.",
+        "🎤 Record yourself singing a nature-themed song while walking through the park.",
+        "🤝 Find a stranger and ask them to help you build a tiny fairy house with natural materials."
     ],
     'restaurant': [
-        "Order something you've never tried before and document the experience!",
-        "Take a photo of your food from the most artistic angle possible.",
-        "Find the most interesting person in the restaurant (respectfully) and imagine their story.",
-        "Document the most unique item on the menu.",
-        "Take a selfie with the most photogenic dish."
+        "🍽️ Order something you've never tried and ask a stranger to guess what it is!",
+        "🎵 Create a beat using your utensils and ask someone to join in.",
+        "📹 Record a video of you doing a dramatic food review for the camera.",
+        "🎤 Sing a song about the food you're eating and ask a stranger to rate it.",
+        "📱 Take a video of you teaching someone how to eat the most interesting dish on your table.",
+        "🤝 Find someone dining alone and ask them to join you for a fun food challenge.",
+        "🎶 Ask the waiter to help you create a silly song about the restaurant's specialty.",
+        "📸 Take a selfie with the chef and ask them to tell you their favorite cooking tip.",
+        "🎵 Use your phone to play a beat and ask a stranger to freestyle rap about their meal.",
+        "📹 Record a video of you doing a taste test blindfolded with a stranger's help."
     ],
     'street': [
-        "Find the most interesting street art or graffiti and photograph it.",
-        "Count how many different colors you can spot in storefronts.",
-        "Take a photo of the most unusual building or architecture.",
-        "Find a street performer and document their performance.",
-        "Look for the most creative shop window display."
+        "🎨 Find street art and ask a stranger to pose with it for a creative photo.",
+        "🎵 Start a beat by clapping and see how many people join in!",
+        "📹 Record a video of you doing your best street performer impression.",
+        "🎤 Sing a song about the street you're on and ask someone to add a verse.",
+        "📱 Take a video of you asking strangers to guess what's in a mystery bag.",
+        "🤝 Find someone waiting for a bus and ask them to help you create a sidewalk chalk drawing.",
+        "🎶 Ask a street musician to teach you a simple melody and record it.",
+        "📸 Take a selfie with a stranger and ask them to tell you their life story in one sentence.",
+        "🎵 Create a beat using sounds from the street (footsteps, car horns, etc.) and record it.",
+        "📹 Record a video of you doing a street dance and ask someone to join you."
     ],
     'beach': [
-        "Build the most creative sandcastle you can and photograph it.",
-        "Find the most interesting seashell and document your discovery.",
-        "Take a photo of the waves from the most dramatic angle.",
-        "Find a perfect spot to watch the sunset and document it.",
-        "Look for the most colorful beach umbrella and take a selfie with it."
+        "🏖️ Build a sandcastle and ask a stranger to help you decorate it!",
+        "🎵 Create a rhythm using seashells and ask someone to join your beach band.",
+        "📹 Record a video of you doing your best mermaid impression in the sand.",
+        "🎤 Sing a beach-themed song and ask someone to harmonize with you.",
+        "📱 Take a video of you teaching a stranger how to find the perfect seashell.",
+        "🤝 Find someone building sand art and ask them to collaborate on a masterpiece.",
+        "🎶 Ask a stranger to help you write a song about the ocean and record it.",
+        "📸 Take a selfie with a stranger and ask them to share their favorite beach memory.",
+        "🎵 Use the waves as a beat and ask someone to freestyle rap about summer.",
+        "📹 Record a video of you doing a beach yoga pose and ask someone to join you."
     ],
     'mall': [
-        "Find the most interesting store display and photograph it.",
-        "Take a selfie with the most unusual mannequin you can find.",
-        "Document the most creative store name or logo.",
-        "Find the most interesting food court item and photograph it.",
-        "Look for the most unique piece of clothing and document it."
+        "🛍️ Find a stranger and ask them to help you pick the most outrageous outfit!",
+        "🎵 Create a beat using items from different stores and ask someone to join in.",
+        "📹 Record a video of you doing a fashion show walk and ask someone to judge it.",
+        "🎤 Sing a shopping-themed song and ask a stranger to add a verse about their favorite store.",
+        "📱 Take a video of you asking strangers to guess what's in your shopping bag.",
+        "🤝 Find someone at the food court and ask them to help you create a food art masterpiece.",
+        "🎶 Ask a store employee to teach you their store's jingle and record it.",
+        "📸 Take a selfie with a stranger and ask them to tell you their shopping secret.",
+        "🎵 Use the mall's ambient sounds to create a beat and ask someone to dance to it.",
+        "📹 Record a video of you doing a mall walk and ask someone to join your fitness challenge."
     ]
 }
 
