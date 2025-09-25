@@ -3,10 +3,10 @@
 # Hoppi
 AI-powered app that turns the real world into your playground!
 
-<table>
+<table border="0" cellpadding="0" cellspacing="0">
 <tr>
 <td><img src="assets/AppMockup.png" alt="App Mockup" width="200"></td>
-<td width="100"></td>
+<td width="60"></td>
 <td><img src="assets/LandingPage_v1.png" alt="Landing Page" height="400"></td>
 </tr>
 </table>
