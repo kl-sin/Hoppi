@@ -3,7 +3,7 @@
 # Hoppi
 AI-powered app that turns the real world into your playground!
 
-<img src="assets/AppMockup.png" alt="App Mockup" width="200"> <img src="assets/LandingPage_v1.png" alt="Landing Page" width="400">
+<img src="assets/AppMockup.png" alt="App Mockup" width="200" style="margin-right: 40px;"> <img src="assets/LandingPage_v1.png" alt="Landing Page" height="400">
 
 ## ✨ What is Hoppi?
 Hoppi encourages people to:
