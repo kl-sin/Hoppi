@@ -3,7 +3,7 @@
 # Hoppi
 AI-powered app that turns the real world into your playground!
 
-<table border="0" cellpadding="0" cellspacing="0">
+<table border="0" cellpadding="0" cellspacing="0" style="border: none; border-collapse: collapse;">
 <tr>
 <td><img src="assets/AppMockup.png" alt="App Mockup" width="200"></td>
 <td width="60"></td>
