@@ -1,20 +1,15 @@
 # Hoppi
 AI-powered app that turns the real world into your playground!
 
-![Hoppi Logo](assets/Hoppi_3dText.png)
+<img src="assets/Hoppi_3dText.png" alt="Hoppi Logo" width="300">
 
-![App Mockup](assets/AppMockup.png)
-
-
----
+<img src="assets/AppMockup.png" alt="App Mockup" width="400">
 
 ## ✨ What is Hoppi?
 Hoppi encourages people to:
 - 🌍 Go outside and interact with real places  
 - 🤝 Connect with strangers through light, safe, fun tasks  
 - 📸 Create and share quirky memories instantly  
-
----
 
 ## 🚀 Features
 - 🌍 **Location Detection** → Geolocation + Overpass API + geopy  
@@ -23,8 +18,6 @@ Hoppi encourages people to:
 - 🎨 **Fun Frames & Points** → Image & video edits with Pillow, OpenCV, MoviePy  
 - 🗄️ **Storage & Analysis** → SQLite or Supabase, analytics with PostHog  
 - 🚀 **Output & Sharing** → Save locally or share instantly  
-
----
 
 ## ⚡ Quick Start
 
