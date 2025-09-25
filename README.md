@@ -3,13 +3,12 @@
 # Hoppi
 AI-powered app that turns the real world into your playground!
 
-<table style="border: none; border-collapse: collapse;">
-<tr>
-<td style="border: none; padding: 0;"><img src="assets/AppMockup.png" alt="App Mockup" width="200"></td>
-<td style="border: none; padding: 0; width: 60px;"></td>
-<td style="border: none; padding: 0; vertical-align: top;"><img src="assets/LandingPage_v1.png" alt="Landing Page" height="400"></td>
-</tr>
-</table>
+<p align="center">
+  <img src="assets/AppMockup.png" alt="App Mockup" width="200" style="vertical-align: top;"/>
+  <span style="display:inline-block; width:60px;"></span>
+  <img src="assets/LandingPage_v1.png" alt="Landing Page" height="400" style="vertical-align: top;"/>
+</p>
+
 
 ## ✨ What is Hoppi?
 Hoppi encourages people to:
