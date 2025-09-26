@@ -54,3 +54,36 @@ python app.py
 ```
 
 Then open your browser and go to `http://localhost:5000`
+
+## 📱 Mobile App
+
+For the best experience on mobile devices, we also have a React Native mobile app!
+
+### Quick Setup:
+```bash
+# Navigate to mobile directory
+cd mobile
+
+# Run setup script
+./setup.sh
+
+# For Android
+npm run android
+
+# For iOS (Mac only)
+npm run ios
+```
+
+### Mobile Features:
+- 📍 **Native GPS** - Works reliably on mobile devices
+- 📸 **Camera Integration** - Take photos, videos, and record audio
+- 🎯 **Location-based Tasks** - Same creative tasks as web version
+- 📱 **Offline Ready** - Works without internet connection
+- 🎨 **Beautiful UI** - Optimized for mobile screens
+
+### Building APK for Android:
+```bash
+cd mobile/android
+./gradlew assembleRelease
+# APK will be in app/build/outputs/apk/release/
+```
