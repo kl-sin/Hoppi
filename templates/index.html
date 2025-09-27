@@ -403,11 +403,35 @@
                     
                     if (placeType) {
                         description = `📍 You are near ${placeType} (${distance} km away)`;
-                    } else if (address.city || address.town || address.village) {
-                        const city = address.city || address.town || address.village;
-                        description = `📍 You are in ${city}`;
-                    } else if (address.road) {
-                        description = `📍 You are on ${address.road}`;
+                    } else {
+                        // Create more interesting descriptions based on available address info
+                        const parts = [];
+                        
+                        if (address.neighbourhood) {
+                            parts.push(`in ${address.neighbourhood}`);
+                        } else if (address.suburb) {
+                            parts.push(`in ${address.suburb}`);
+                        } else if (address.city || address.town || address.village) {
+                            const city = address.city || address.town || address.village;
+                            parts.push(`in ${city}`);
+                        }
+                        
+                        if (address.road) {
+                            parts.push(`on ${address.road}`);
+                        } else if (address.pedestrian) {
+                            parts.push(`on ${address.pedestrian}`);
+                        }
+                        
+                        if (address.house_number && address.road) {
+                            parts.push(`at ${address.house_number} ${address.road}`);
+                        }
+                        
+                        if (parts.length > 0) {
+                            description = `📍 You are ${parts.join(' ')}`;
+                        } else {
+                            // Fallback with coordinates
+                            description = `📍 You are at ${currentLocation.latitude.toFixed(4)}, ${currentLocation.longitude.toFixed(4)}`;
+                        }
                     }
                 }
                 
@@ -422,15 +446,19 @@
         // Get place type from address
         function getPlaceType(address) {
             const placeTypes = {
-                'park': ['park', 'garden', 'green', 'recreation'],
-                'mall': ['mall', 'shopping', 'center', 'plaza'],
-                'museum': ['museum', 'gallery', 'exhibition'],
-                'restaurant': ['restaurant', 'cafe', 'bar', 'food'],
-                'beach': ['beach', 'coast', 'shore', 'seaside'],
-                'library': ['library', 'book'],
-                'hospital': ['hospital', 'medical', 'clinic'],
-                'school': ['school', 'university', 'college', 'education'],
-                'station': ['station', 'terminal', 'transport']
+                'park': ['park', 'garden', 'green', 'recreation', 'playground', 'trail', 'nature', 'forest', 'woodland'],
+                'mall': ['mall', 'shopping', 'center', 'plaza', 'market', 'retail', 'store', 'shop'],
+                'museum': ['museum', 'gallery', 'exhibition', 'art', 'cultural', 'heritage', 'history'],
+                'restaurant': ['restaurant', 'cafe', 'bar', 'food', 'dining', 'kitchen', 'bistro', 'eatery'],
+                'beach': ['beach', 'coast', 'shore', 'seaside', 'waterfront', 'marina', 'harbor'],
+                'library': ['library', 'book', 'reading', 'study'],
+                'hospital': ['hospital', 'medical', 'clinic', 'health', 'doctor', 'medicine'],
+                'school': ['school', 'university', 'college', 'education', 'academy', 'institute', 'campus'],
+                'station': ['station', 'terminal', 'transport', 'bus', 'train', 'metro', 'subway'],
+                'office': ['office', 'building', 'tower', 'complex', 'business', 'corporate'],
+                'residential': ['residential', 'apartment', 'condo', 'house', 'home', 'street'],
+                'entertainment': ['theater', 'cinema', 'stadium', 'arena', 'venue', 'entertainment'],
+                'religious': ['church', 'temple', 'mosque', 'synagogue', 'religious', 'worship']
             };
             
             const addressString = JSON.stringify(address).toLowerCase();
