@@ -7,7 +7,7 @@
 🔗 **Live Demo:** [Try Hoppi here](https://huggingface.co/spaces/klsin/Hoppi)  
 
 <p align="left">
-  <img src="assets/Cursor_Landing.png" alt="Cursor Landing Page" width="650" style="vertical-align: top;"/>
+  <img src="assets/CursorPage.png" alt="Cursor Landing Page" width="650" style="vertical-align: top;"/>
 </p>
 
 ---
