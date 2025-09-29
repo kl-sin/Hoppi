@@ -6,8 +6,8 @@
 
 🔗 **Live Demo:** [Try Hoppi here](https://huggingface.co/spaces/klsin/Hoppi)  
 
-<p align="center">
-  <img src="assets/Cursor_Landing.png" alt="Cursor Landing Page" width="500" style="vertical-align: top;"/>
+<p align="left">
+  <img src="assets/Cursor_Landing.png" alt="Cursor Landing Page" width="650" style="vertical-align: top;"/>
 </p>
 
 ---
