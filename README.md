@@ -4,10 +4,10 @@
 # Hoppi
 **Hoppi** is a playful web app that turns the real world into your adventure playground! 🌍🎯  
 
+🔗 **Live Demo:** [Try Hoppi here](https://huggingface.co/spaces/klsin/Hoppi)  
+
 <p align="center">
-  <img src="assets/AppMockup.png" alt="App Mockup" width="250" style="vertical-align: top;"/>
-  <span style="display:inline-block; width:60px;"></span>
-  <img src="assets/LandingPage_v1.png" alt="Landing Page" width="500" style="vertical-align: top;"/>
+  <img src="assets/Cursor_Landing.png" alt="Cursor Landing Page" width="500" style="vertical-align: top;"/>
 </p>
 
 ---
