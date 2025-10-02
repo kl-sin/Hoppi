@@ -31,26 +31,4 @@ def prompt_llm(prompt, with_linebreak=False):
     )
     output = response.choices[0].message.content
 
-    if with_linebreak:
-        # Wrap the output
-        wrapped_output = textwrap.fill(output, width=50)
-
-        return wrapped_output
-    else:
-        return output
-
-
-if __name__ == "__main__":
-    ### Task 1: YOUR CODE HERE - Write a prompt for the LLM to respond to the user
-    prompt = "write a 3 line post about pizza"
-
-    # Get Response
-    response = prompt_llm(prompt)
-
-    print("\nResponse:\n")
-    print(response)
-    print("-" * 100)
-
-    # save response under results/
-    with open("results/response.txt", "w") as f:
-        f.write(response)
+    return textwrap.fill(output, width=50) if with_linebreak else output

@@ -2,6 +2,24 @@ from flask import Flask, render_template, request, jsonify, send_file
 import random
 import os
 from werkzeug.utils import secure_filename
+from llm import prompt_llm
+from functools import lru_cache
+
+# Simple in-memory cache for repeated prompts (reset on server restart)
+@lru_cache(maxsize=10)
+def get_cached_task_for_location(location_type):
+    try:
+        prompt = (
+    f"Generate a single, short, fun and social task for someone at a {location_type}. "
+    f"The task should be simple, playful, and easy to understand. "
+    f"Limit it to one sentence only. Make it sound like a game or challenge. "
+    f"No emojis, no hashtags."
+)
+
+        task = prompt_llm(prompt)
+        return task.strip()
+    except Exception:
+        return None  # Will trigger fallback
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -87,25 +105,36 @@ def get_location_type(lat, lon):
 def index():
     return render_template('index.html')
 
-@app.route('/task', methods=['POST'])
+@app.route('/generate-task', methods=['POST'])
 def generate_task():
     try:
         data = request.get_json()
         lat = data.get('latitude')
         lon = data.get('longitude')
-        
+
         if not lat or not lon:
             return jsonify({'error': 'Location data required'}), 400
-        
+
         location_type = get_location_type(lat, lon)
-        task = random.choice(TASKS_BY_LOCATION.get(location_type, TASKS_BY_LOCATION['street']))
-        
+
+        # First, try LLM (cached)
+        task = get_cached_task_for_location(location_type)
+
+        # Track source
+        source = "LLM"
+
+        # Fallback if LLM failed
+        if not task:
+            task = random.choice(TASKS_BY_LOCATION.get(location_type, TASKS_BY_LOCATION['street']))
+            source = "fallback"
+
         return jsonify({
             'task': task,
             'location_type': location_type,
-            'coordinates': {'lat': lat, 'lon': lon}
+            'coordinates': {'lat': lat, 'lon': lon},
+            'source': source  # 👈 this tells you where the task came from
         })
-    
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

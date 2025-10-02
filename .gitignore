@@ -143,6 +143,11 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+uploads/
+
+
+# llm responses
+.llm_responses/
 
 # Spyder project settings
 .spyderproject

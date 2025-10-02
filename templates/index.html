@@ -485,7 +485,8 @@
             showLoading(true);
             
             try {
-                const response = await fetch('/task', {
+                const response = await fetch('/generate-task', {
+
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
