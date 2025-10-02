@@ -1,13 +1,15 @@
 from flask import Flask, render_template, request, jsonify, send_file
 import random
 import os
+import requests
 from werkzeug.utils import secure_filename
 from llm import prompt_llm
 from functools import lru_cache
 
+
 # Simple in-memory cache for repeated prompts (reset on server restart)
-@lru_cache(maxsize=10)
-def get_cached_task_for_location(location_type):
+# @lru_cache(maxsize=10)
+def get_task_for_location(location_type):
     try:
         prompt = (
     f"Generate a single, short, fun and social task for someone at a {location_type}. "
@@ -93,13 +95,38 @@ TASKS_BY_LOCATION = {
 }
 
 def get_location_type(lat, lon):
-    """Simple location type detection based on coordinates"""
-    # This is a simplified version - in reality you'd use reverse geocoding
-    # For demo purposes, we'll use some basic logic
-    if -90 <= lat <= 90 and -180 <= lon <= 180:
-        # Randomly assign location type for demo
-        return random.choice(['park', 'restaurant', 'street', 'beach', 'mall'])
-    return 'street'
+    try:
+        url = f"https://nominatim.openstreetmap.org/reverse"
+        params = {
+            'format': 'json',
+            'lat': lat,
+            'lon': lon,
+            'zoom': 18,
+            'addressdetails': 1
+        }
+        headers = {'User-Agent': 'HoppiApp'}
+        response = requests.get(url, params=params, headers=headers)
+        data = response.json()
+
+        address = data.get("address", {})
+        keywords = {
+            'park': ['park', 'garden', 'playground', 'recreation'],
+            'restaurant': ['restaurant', 'cafe', 'bar', 'food'],
+            'beach': ['beach', 'coast', 'shore', 'seaside'],
+            'mall': ['mall', 'shopping', 'retail'],
+        }
+
+        # Convert address values to a lowercase string
+        address_text = " ".join(address.values()).lower()
+        for place_type, word_list in keywords.items():
+            if any(word in address_text for word in word_list):
+                return place_type
+
+        return "street"  # fallback if no match
+
+    except Exception as e:
+        print("Reverse geocoding failed:", e)
+        return "street"
 
 @app.route('/')
 def index():
@@ -108,35 +135,40 @@ def index():
 @app.route('/generate-task', methods=['POST'])
 def generate_task():
     try:
+        data =@app.route('/generate-task', methods=['POST'])
+def generate_task():
+    try:
         data = request.get_json()
         lat = data.get('latitude')
         lon = data.get('longitude')
+        force_refresh = data.get('fresh', False)
 
         if not lat or not lon:
             return jsonify({'error': 'Location data required'}), 400
 
         location_type = get_location_type(lat, lon)
 
-        # First, try LLM (cached)
-        task = get_cached_task_for_location(location_type)
-
-        # Track source
-        source = "LLM"
-
-        # Fallback if LLM failed
-        if not task:
-            task = random.choice(TASKS_BY_LOCATION.get(location_type, TASKS_BY_LOCATION['street']))
-            source = "fallback"
+        if force_refresh:
+            # Force new generation
+            prompt = (
+                f"Write one short, creative, and fun activity that a person could do at a {location_type}. "
+                f"The task should be playful, social, and involve interaction with people or the environment. "
+                f"Do not use emojis or hashtags. Keep it under 2 sentences."
+            )
+            task = prompt_llm(prompt).strip()
+        else:
+            # Use cached (or fallback)
+            task = get_cached_task_for_location(location_type)
 
         return jsonify({
             'task': task,
             'location_type': location_type,
-            'coordinates': {'lat': lat, 'lon': lon},
-            'source': source  # 👈 this tells you where the task came from
+            'coordinates': {'lat': lat, 'lon': lon}
         })
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/upload', methods=['POST'])
 def upload_image():
