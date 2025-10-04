@@ -90,7 +90,7 @@
             border-radius: 15px;
             margin: 20px 0;
             border-left: 5px solid #667eea;
-            display: none;
+            /* display: none; */
         }
 
         .task-text {
@@ -102,7 +102,7 @@
 
         .upload-section {
             margin: 30px 0;
-            display: none;
+            /* display: none; */
         }
 
         .upload-area {
@@ -221,7 +221,16 @@
                 <p id="locationDescription" style="font-weight: bold; margin-bottom: 10px; color: #333;"></p>
                 <div id="map" style="width: 100%; height: 300px; border-radius: 10px; margin: 10px 0;"></div>
             </div>
+            <p id="locationResultMsg" style="display:none; margin-bottom:10px; font-weight:bold; color:#155724;"></p>
+
             <button class="btn" id="getLocationBtn" onclick="getLocationManually()" style="margin-top: 10px;">📍 Get My Location</button>
+             <div class="status" id="status"></div>
+        </div>
+
+        <!-- Small Loading Indicator for Location -->
+        <div class="loading" id="locationLoading" style="display:none;">
+            <div class="spinner"></div>
+            <p>Detecting your location...</p>
         </div>
 
         <div class="loading" id="loading">
@@ -275,8 +284,6 @@
                 <button class="btn btn-secondary" id="shareBtn">📤 Share</button>
             </div>
         </div>
-
-        <div class="status" id="status"></div>
     </div>
 
     <script>
@@ -291,64 +298,66 @@
         let map = null;
         let locationMarker = null;
 
-        // Get user's location with enhanced error handling
-        function getLocation() {
-            const status = document.getElementById('locationStatus');
-            const locationText = document.getElementById('locationText');
-            const locationInfo = document.getElementById('locationInfo');
-            
-            if (!navigator.geolocation) {
-                status.textContent = "❌ Geolocation is not supported by this browser.";
-                showStatus('Geolocation is not supported by this browser.', 'error');
-                return;
+
+            // Get user's location with enhanced error handling
+            function getLocation() {
+    const status = document.getElementById('locationStatus');
+    const locationInfo = document.getElementById('locationInfo');
+
+    if (!navigator.geolocation) {
+        status.textContent = "❌ Geolocation is not supported by this browser.";
+        showStatus('Geolocation is not supported by this browser.', 'error');
+        return;
+    }
+
+    status.textContent = "⏳ Locating...";
+    locationInfo.style.display = 'block';
+
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            currentLocation = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy
+            };
+
+            // ✅ Hide locating message and show map
+            status.style.display = 'none';
+            showMapAndLocation();
+            showStatus('Location detected successfully!', 'success');
+
+            // 🚫 Do not hide or touch task/upload sections
+        },
+        function(error) {
+            let errorMessage = "❌ Unable to detect location. ";
+
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMessage += "Permission denied.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMessage += "Position unavailable.";
+                    break;
+                case error.TIMEOUT:
+                    errorMessage += "Request timed out.";
+                    break;
+                default:
+                    errorMessage += "Unknown error.";
+                    break;
             }
 
-            status.textContent = "⏳ Locating...";
-            locationInfo.style.display = 'block';
-
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    currentLocation = {
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude
-                    };
-                    
-                    status.textContent = "✅ Location found!";
-                    
-                    // Show map and location description
-                    showMapAndLocation();
-                    
-                    showStatus('Location detected successfully!', 'success');
-                    generateTask();
-                },
-                function(error) {
-                    let errorMessage = "❌ Error: ";
-                    switch(error.code) {
-                        case error.PERMISSION_DENIED:
-                            errorMessage += "Location access denied by user.";
-                            break;
-                        case error.POSITION_UNAVAILABLE:
-                            errorMessage += "Location information is unavailable.";
-                            break;
-                        case error.TIMEOUT:
-                            errorMessage += "Location request timed out.";
-                            break;
-                        default:
-                            errorMessage += "An unknown error occurred.";
-                            break;
-                    }
-                    
-                    status.textContent = errorMessage;
-                    showStatus('Unable to get your location. Please enable location access and try again.', 'error');
-                    console.error('Geolocation error:', error);
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 300000
-                }
-            );
+            status.textContent = errorMessage;
+            status.style.display = 'block';
+            showStatus(errorMessage, 'error');
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000
         }
+    );
+}
+
 
         // Manual location button handler
         function getLocationManually() {
@@ -380,71 +389,76 @@
                 map.removeLayer(locationMarker);
             }
             locationMarker = L.marker([currentLocation.latitude, currentLocation.longitude])
-                .addTo(map)
-                .bindPopup('📍 You are here!')
-                .openPopup();
+                .addTo(map);
+
             
             // Get location description
             getLocationDescription();
+            
         }
 
         // Get location description with nearby places
         async function getLocationDescription() {
-            try {
-                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLocation.latitude}&lon=${currentLocation.longitude}&addressdetails=1`);
-                const data = await response.json();
-                
-                let description = "📍 You are here!";
-                
-                if (data && data.address) {
-                    const address = data.address;
-                    const placeType = getPlaceType(address);
-                    const distance = getRandomDistance();
-                    
-                    if (placeType) {
-                        description = `📍 You are near ${placeType} (${distance} km away)`;
-                    } else {
-                        // Create more interesting descriptions based on available address info
-                        const parts = [];
-                        
-                        if (address.neighbourhood) {
-                            parts.push(`in ${address.neighbourhood}`);
-                        } else if (address.suburb) {
-                            parts.push(`in ${address.suburb}`);
-                        } else if (address.city || address.town || address.village) {
-                            const city = address.city || address.town || address.village;
-                            parts.push(`in ${city}`);
-                        }
-                        
-                        if (address.road) {
-                            parts.push(`on ${address.road}`);
-                        } else if (address.pedestrian) {
-                            parts.push(`on ${address.pedestrian}`);
-                        }
-                        
-                        if (address.house_number && address.road) {
-                            parts.push(`at ${address.house_number} ${address.road}`);
-                        }
-                        
-                        if (parts.length > 0) {
-                            description = `📍 You are ${parts.join(' ')}`;
-                        } else {
-                            // Fallback with coordinates
-                            description = `📍 You are at ${currentLocation.latitude.toFixed(4)}, ${currentLocation.longitude.toFixed(4)}`;
-                        }
-                    }
-                }
-                
-                document.getElementById('locationDescription').textContent = description;
-                
-            } catch (error) {
-                console.error('Error getting location description:', error);
-                document.getElementById('locationDescription').textContent = "📍 You are here!";
+    try {
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLocation.latitude}&lon=${currentLocation.longitude}&addressdetails=1`
+        );
+        const data = await response.json();
+
+        let description = "Hey, you're somewhere interesting! What are you up to?";
+        let popupMessage = `📍 You are at ${currentLocation.latitude.toFixed(4)}, ${currentLocation.longitude.toFixed(4)}`;
+
+        if (data && data.address) {
+            const address = data.address;
+            
+            const placeType = getPlaceType(address);  // ✅ Get place type like 'park', 'cafe', etc.
+            const road = address.road || address.pedestrian || address.path || null;
+            const neighborhood = address.neighbourhood || address.suburb || address.city || address.town || address.village || null;
+
+            if (placeType) {
+                description = `Hey, you are in a ${placeType}. What are you up to?`;
+                popupMessage = `📍 You are in a ${placeType}`;
+            } else if (road) {
+                description = `Hey, you are on ${road}. What are you up to?`;
+                popupMessage = `📍 You are on ${road}`;
+            } else if (neighborhood) {
+                description = `Hey, you are near ${neighborhood}. What are you up to?`;
+                popupMessage = `📍 You are near ${neighborhood}`;
             }
         }
 
+        document.getElementById('locationDescription').textContent = description;
+
+        // ✅ Update map marker popup
+        if (locationMarker) {
+            locationMarker.bindPopup(popupMessage).openPopup();
+        }
+
+    } catch (error) {
+        console.error('Error getting location description:', error);
+        document.getElementById('locationDescription').textContent = "📍 Hey, you are here! What are you up to?";
+
+        // Fallback marker message
+        if (locationMarker) {
+            locationMarker.bindPopup("📍 You are here!").openPopup();
+        }
+    }
+}
+
         // Get place type from address
         function getPlaceType(address) {
+            const placeFields = [
+                address.amenity,
+                address.leisure,
+                address.shop,
+                address.tourism,
+                address.highway,
+                address.office,
+                address.building,
+                address.natural,
+                address.landuse
+            ].filter(Boolean).map(v => v.toLowerCase());
+
             const placeTypes = {
                 'park': ['park', 'garden', 'green', 'recreation', 'playground', 'trail', 'nature', 'forest', 'woodland'],
                 'mall': ['mall', 'shopping', 'center', 'plaza', 'market', 'retail', 'store', 'shop'],
@@ -464,7 +478,7 @@
             const addressString = JSON.stringify(address).toLowerCase();
             
             for (const [type, keywords] of Object.entries(placeTypes)) {
-                if (keywords.some(keyword => addressString.includes(keyword))) {
+                if (placeFields.some(field => keywords.includes(field))) {
                     return type;
                 }
             }
@@ -472,17 +486,11 @@
             return null;
         }
 
-        // Get random distance for demo
-        function getRandomDistance() {
-            const distances = [0.1, 0.2, 0.3, 0.5, 0.8, 1.2, 1.5, 2.0, 2.5, 3.0];
-            return distances[Math.floor(Math.random() * distances.length)];
-        }
-
         // Generate task based on location
         async function generateTask() {
             if (!currentLocation) return;
 
-            showLoading(true);
+            //showLoading(true);
             
             try {
                 const response = await fetch('/generate-task', {

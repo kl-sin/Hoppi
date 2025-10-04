@@ -4,26 +4,62 @@ import os
 from werkzeug.utils import secure_filename
 from llm import prompt_llm
 from functools import lru_cache
+from datetime import datetime
 
 # Simple in-memory cache for repeated prompts (reset on server restart)
-@lru_cache(maxsize=10)
-def get_cached_task_for_location(location_type):
+# @lru_cache(maxsize=10)
+def get_cached_task_for_location(location_type, lat=None, lon=None):
     try:
+        # 🌞 Time of day
+        hour = datetime.now().hour
+        if hour < 12:
+            time_hint = "It's morning, suggest something energizing."
+        elif hour < 17:
+            time_hint = "It's afternoon, suggest something social."
+        else:
+            time_hint = "It's evening, suggest something reflective or relaxing."
+
+        # 🌦 Weather condition
+        weather_hint = ""
+        if lat is not None and lon is not None:
+            weather_hint = get_weather_hint(lat, lon)
+
+        # 🎲 Add variation to keep tasks fresh
+        variation_hint = random.choice([
+            "Make it involve a stranger.",
+            "Encourage them to take a photo.",
+            "Make it feel like a mini-game.",
+            "Include movement or interaction with the environment.",
+            "Encourage a quick creative act."
+        ])
+
+        # 🧠 Final prompt
         prompt = (
-    f"Generate a single, short, fun and social task for someone at {location_type}."
-    f"The task should be simple, playful, and easy to understand. "
-    f"Limit it to one sentence only. Make it sound like a game or challenge. "
-    f"No emojis, no hashtags."
+    f"You are a playful assistant generating real-world micro-challenges.\n"
+    f"The user is in a {location_type} environment.\n"
+    f"Current time of day: {datetime.now().strftime('%H:%M')}.\n"
+    f"{time_hint}\n"
+    f"{weather_hint}\n"
+    f"{variation_hint}\n"
+    f"Based on this context, generate a **new**, unique, and fun challenge they can do now.\n"
+    f"The task should feel appropriate for the environment and conditions.\n"
+    f"Keep it concise (1 sentence), easy to understand, and suitable for someone walking outside.\n"
+    f"Do not repeat ideas you've given before. Avoid using emojis or hashtags."
+    f"Their coordinates are approximately {lat:.4f}, {lon:.4f}."
+    f"Ensure this task is **different** from previous ones in style or action."
 )
-        # save prompt into file under results/prompts.txt
-        if not os.path.exists('results'):
-            os.makedirs('results')
+
+        # Save prompt for inspection
+        os.makedirs('results', exist_ok=True)
         with open('results/prompts.txt', 'w') as f:
-            f.write(f"{prompt}\n")
+            f.write(prompt + "\n")
+
         task = prompt_llm(prompt)
         return task.strip()
-    except Exception:
-        return None  # Will trigger fallback
+    
+    except Exception as e:
+        print(f"[ERROR] Prompt generation failed: {e}")
+        return None # Will trigger fallback
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -96,14 +132,72 @@ TASKS_BY_LOCATION = {
     ]
 }
 
+
+def get_weather_hint(lat, lon):
+    try:
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
+        res = requests.get(url)
+        data = res.json()
+        weather_code = data["current_weather"]["weathercode"]
+
+        # See: https://open-meteo.com/en/docs for full code meanings
+        weather_conditions = {
+            0: "clear sky",
+            1: "mainly clear",
+            2: "partly cloudy",
+            3: "overcast",
+            45: "fog",
+            48: "depositing rime fog",
+            51: "light drizzle",
+            61: "light rain",
+            71: "light snow",
+            80: "rain showers",
+        }
+
+        description = weather_conditions.get(weather_code, "unknown conditions")
+
+        if weather_code in [0, 1]:
+            return "It's sunny, suggest something social and outdoors."
+        elif weather_code in [2, 3, 45]:
+            return "It's cloudy, suggest something cozy or introspective."
+        elif weather_code in [51, 61, 80]:
+            return "It's rainy, suggest something under shelter or with rain gear."
+        elif weather_code in [71]:
+            return "It's snowy, suggest something fun with snow."
+        else:
+            return f"The weather is {description}, suggest something suitable."
+    except Exception as e:
+        print(f"[Weather Error] {e}")
+        return ""
+
+
 def get_location_type(lat, lon):
-    """Simple location type detection based on coordinates"""
-    # This is a simplified version - in reality you'd use reverse geocoding
-    # For demo purposes, we'll use some basic logic
-    if -90 <= lat <= 90 and -180 <= lon <= 180:
-        # Randomly assign location type for demo
-        return random.choice(['park', 'restaurant', 'street', 'beach', 'mall'])
-    return 'street'
+    import requests
+
+    try:
+        url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json&zoom=18&addressdetails=1"
+        res = requests.get(url, headers={"User-Agent": "hoppi-app"})
+        data = res.json()
+        tags = data.get("address", {})
+        
+        if 'beach' in str(tags).lower() or 'coast' in str(tags).lower():
+            return 'beach'
+        elif 'park' in tags.get('leisure', '') or 'park' in str(tags).lower():
+            return 'park'
+        elif 'restaurant' in str(tags).lower() or 'cafe' in str(tags).lower():
+            return 'restaurant'
+        elif 'mall' in str(tags).lower() or 'shopping' in str(tags).lower():
+            return 'mall'
+        elif 'forest' in str(tags).lower():
+            return 'park'
+        elif 'road' in tags or 'suburb' in tags or 'city' in tags:
+            return 'street'
+        else:
+            return 'street'
+    except Exception as e:
+        print(f"Location type detection failed: {e}")
+        return 'street'
+
 
 @app.route('/')
 def index():
