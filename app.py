@@ -115,7 +115,8 @@ def get_cached_task_for_location(location_type, lat=None, lon=None):
             f.write(prompt + "\n")
 
         task = prompt_llm(prompt)
-        return task.strip()
+        return task.strip(), locals().get("main_place") if "main_place" in locals() else None
+
 
     except Exception as e:
         print(f"[ERROR] Prompt generation failed: {e}")
@@ -280,7 +281,10 @@ def get_nearby_places(lat, lon, radius=500):
             tags = el.get('tags', {})
             name = tags.get('name', 'Unknown place')
             category = tags.get('amenity') or tags.get('shop') or tags.get('leisure') or tags.get('tourism') or 'unknown'
-            nearby.append({'name': name, 'category': category})
+            lat_el = el.get('lat')
+            lon_el = el.get('lon')
+            nearby.append({'name': name, 'category': category, 'lat': lat_el, 'lon': lon_el})
+
 
         print(f"[DEBUG] Nearby places: {nearby}")
         return nearby
@@ -350,7 +354,7 @@ def generate_task():
         location_type = get_location_type(lat, lon)
 
         # First, try LLM (cached)
-        task = get_cached_task_for_location(location_type, lat, lon)
+        task, selected_place = get_cached_task_for_location(location_type, lat, lon)
 
         # Track source
         source = "LLM"
@@ -361,11 +365,13 @@ def generate_task():
             source = "fallback"
 
         return jsonify({
-            'task': task,
-            'location_type': location_type,
-            'coordinates': {'lat': lat, 'lon': lon},
-            'source': source  # 👈 this tells you where the task came from
-        })
+        'task': task,
+        'location_type': location_type,
+        'coordinates': {'lat': lat, 'lon': lon},
+        'source': source,  # 👈 this tells you where the task came from
+        'selected_place': selected_place if 'selected_place' in locals() else None
+    })
+
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
