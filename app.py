@@ -12,6 +12,12 @@ from datetime import datetime
 # @lru_cache(maxsize=10)
 def get_cached_task_for_location(location_type, lat=None, lon=None):
     try:
+        # Default placeholders
+        weather_hint = ""
+        nearby_hint = ""
+        variation_hint = ""
+        freshness_hint = ""
+
         # 🌞 Time of day
         hour = datetime.now().hour
         if hour < 12:
@@ -21,47 +27,87 @@ def get_cached_task_for_location(location_type, lat=None, lon=None):
         else:
             time_hint = "It's evening, suggest something reflective or relaxing."
 
-        # 🌙 Safety considerations (NEW — add this right after time detection)
-        if hour >= 19 or hour < 6:  # 8PM–6AM
+        # 🌙 Safety considerations
+        if hour >= 20 or hour < 6:
             safety_hint = (
                 "It's nighttime, so avoid tasks involving strangers or dark areas. "
                 "Focus on calm, solo, or reflective activities instead."
             )
         else:
             safety_hint = "It's daytime, so interactive and social tasks are fine."
-            
+
         # 🌦 Weather condition
-        weather_hint = ""
         if lat is not None and lon is not None:
             weather_hint = get_weather_hint(lat, lon)
-            print(f"[DEBUG] Weather hint: {weather_hint}")  # 👈 ADD THIS LINE HERE
+            print(f"[DEBUG] Weather hint: {weather_hint}")
 
-        # 🎲 Add variation to keep tasks fresh
-        variation_hint = random.choice([
+        # 🗺️ Nearby place detection
+        if lat is not None and lon is not None:
+            nearby_places = get_nearby_places(lat, lon)
+            if nearby_places:
+                main_place = random.choice(nearby_places)
+                nearby_hint = (
+                    f"There is a {main_place['category']} nearby called '{main_place['name']}'. "
+                    "Suggest something relevant to that place."
+                )
+                print(f"[DEBUG] Nearby hint: {nearby_hint}")
+            else:
+                nearby_hint = "No major places nearby. Suggest something suitable for open areas."
+
+        # 🎲 Variation hint
+        daytime_variations = [
             "Make it involve a stranger.",
             "Encourage them to take a photo.",
             "Make it feel like a mini-game.",
             "Include movement or interaction with the environment.",
-            "Encourage a quick creative act."
+            "Encourage a quick creative act.",
+            "Make them explore a small detail around them they normally ignore.",
+            "Include something involving color or sound."
+        ]
+        nighttime_variations = [
+            "Encourage quiet reflection.",
+            "Focus on creativity or mindfulness.",
+            "Suggest a calming or self-reflective act.",
+            "Make it about observing surroundings quietly.",
+            "Encourage them to write or record a thought privately.",
+            "Let them notice city lights, sounds, or patterns quietly.",
+            "Prompt them to capture a subtle night detail in a photo or note."
+        ]
+
+        variation_hint = random.choice(
+            nighttime_variations if hour >= 20 or hour < 6 else daytime_variations
+        )
+
+        # 🌀 Freshness randomizer — always defined
+        freshness_hint = random.choice([
+            "Make sure this challenge feels totally new compared to any previous idea.",
+            "Ensure this activity feels distinct in tone or action from the last few suggestions.",
+            "Add a small creative twist not seen in previous tasks.",
+            "Vary the setting or mood slightly to keep it interesting.",
+            "Change up the interaction style for variety."
         ])
 
-        # 🧠 Final prompt
+                # 🧠 Final prompt — tuned to avoid repetition and bland introspection
         prompt = (
-    f"You are a playful assistant generating real-world micro-challenges.\n"
-    f"The user is in a {location_type} environment.\n"
-    f"Current time of day: {datetime.now().strftime('%H:%M')}.\n"
-    f"{time_hint}\n"
-    f"{weather_hint}\n"
-    f"{safety_hint}\n"     # 👈 add this line
-    f"{variation_hint}\n"
-    f"Based on this context, generate a **new**, unique, and fun challenge they can do now.\n"
-    f"The task should feel appropriate for the environment and conditions.\n"
-    f"Keep it concise (1 sentence), easy to understand, and suitable for someone walking outside.\n"
-    f"Do not repeat ideas you've given before. Avoid using emojis or hashtags.\n"
-    f"Their coordinates are approximately {lat:.4f}, {lon:.4f}.\n"
-    f"Ensure this task is **different** from previous ones in style or action."
-)
-
+            f"You are a playful assistant generating real-world micro-challenges.\n"
+            f"The user is in a {location_type} environment.\n"
+            f"Current time of day: {datetime.now().strftime('%H:%M')}.\n"
+            f"{time_hint}\n"
+            f"{weather_hint}\n"
+            f"{safety_hint}\n"
+            f"{nearby_hint}\n"
+            f"{variation_hint}\n"
+            f"{freshness_hint}\n"
+            "⚠️ Avoid starting the challenge with overused phrases like "
+            "'Take a moment', 'Pause and observe', or 'Sit quietly'. "
+            "Instead, begin dynamically with an action verb or clear instruction "
+            "(e.g., 'Find', 'Look for', 'Create', 'Try', 'Notice').\n"
+            "Vary tone: some challenges should feel playful, others curious or mindful.\n"
+            "Keep the challenge short (1 sentence), clear, and realistic for someone walking or outdoors.\n"
+            "Never repeat previous ideas. Avoid emojis or hashtags.\n"
+            f"Their coordinates are approximately {lat:.4f}, {lon:.4f}.\n"
+            f"Ensure this task is **different** from previous ones in both action and tone."
+        )
 
         # Save prompt for inspection
         os.makedirs('results', exist_ok=True)
@@ -70,10 +116,10 @@ def get_cached_task_for_location(location_type, lat=None, lon=None):
 
         task = prompt_llm(prompt)
         return task.strip()
-    
+
     except Exception as e:
         print(f"[ERROR] Prompt generation failed: {e}")
-        return None # Will trigger fallback
+        return None
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -183,6 +229,80 @@ def get_weather_hint(lat, lon):
     except Exception as e:
         print(f"[Weather Error] {e}")
         return ""
+
+def get_nearby_places(lat, lon, radius=500):
+    import requests
+
+    # Overpass API endpoint
+    url = "https://overpass-api.de/api/interpreter"
+
+    # Expanded Overpass query for richer context
+    query = f"""
+    [out:json];
+    (
+      node["leisure"="park"](around:{radius},{lat},{lon});
+      node["leisure"="playground"](around:{radius},{lat},{lon});
+      node["amenity"="cafe"](around:{radius},{lat},{lon});
+      node["amenity"="restaurant"](around:{radius},{lat},{lon});
+      node["amenity"="fast_food"](around:{radius},{lat},{lon});
+      node["amenity"="bar"](around:{radius},{lat},{lon});
+      node["amenity"="pub"](around:{radius},{lat},{lon});
+      node["shop"="mall"](around:{radius},{lat},{lon});
+      node["shop"="supermarket"](around:{radius},{lat},{lon});
+      node["shop"="convenience"](around:{radius},{lat},{lon});
+      node["amenity"="library"](around:{radius},{lat},{lon});
+      node["amenity"="school"](around:{radius},{lat},{lon});
+      node["amenity"="university"](around:{radius},{lat},{lon});
+      node["amenity"="hospital"](around:{radius},{lat},{lon});
+      node["amenity"="clinic"](around:{radius},{lat},{lon});
+      node["amenity"="bus_station"](around:{radius},{lat},{lon});
+      node["amenity"="train_station"](around:{radius},{lat},{lon});
+      node["tourism"="museum"](around:{radius},{lat},{lon});
+      node["tourism"="art_gallery"](around:{radius},{lat},{lon});
+      node["leisure"="sports_centre"](around:{radius},{lat},{lon});
+      node["leisure"="fitness_centre"](around:{radius},{lat},{lon});
+      node["amenity"="place_of_worship"](around:{radius},{lat},{lon});
+      node["amenity"="marketplace"](around:{radius},{lat},{lon});
+      node["amenity"="theatre"](around:{radius},{lat},{lon});
+      node["tourism"="hotel"](around:{radius},{lat},{lon});
+    );
+    out center;
+    """
+
+    try:
+        res = requests.get(url, params={'data': query}, headers={'User-Agent': 'hoppi-app'})
+        data = res.json()
+        if 'elements' not in data:
+            return []
+
+        nearby = []
+        for el in data['elements']:
+            tags = el.get('tags', {})
+            name = tags.get('name', 'Unknown place')
+            category = tags.get('amenity') or tags.get('shop') or tags.get('leisure') or tags.get('tourism') or 'unknown'
+            nearby.append({'name': name, 'category': category})
+
+        print(f"[DEBUG] Nearby places: {nearby}")
+        return nearby
+
+    except Exception as e:
+        print(f"[ERROR] Nearby place detection failed: {e}")
+        return []
+
+
+                # 🗺️ Nearby place detection
+        nearby_hint = ""
+        if lat is not None and lon is not None:
+            nearby_places = get_nearby_places(lat, lon)
+            if nearby_places:
+                main_place = random.choice(nearby_places)
+                nearby_hint = (
+                    f"There is a {main_place['category']} nearby called '{main_place['name']}'. "
+                    "Suggest something relevant to that place."
+                )
+                print(f"[DEBUG] Nearby hint: {nearby_hint}")
+            else:
+                nearby_hint = "No major places nearby. Suggest something suitable for open areas."
 
 
 def get_location_type(lat, lon):
