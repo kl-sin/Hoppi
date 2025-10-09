@@ -124,6 +124,32 @@
             border-color: #4c63d2;
         }
 
+        .polaroid {
+            width: 300px;
+            background: white;
+            padding: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border-radius: 10px;
+            margin: 20px auto;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+        }
+
+        .polaroid img {
+            width: 100%;
+            border-radius: 5px;
+        }
+
+        .polaroid textarea {
+            width: 100%;
+            border: none;
+            resize: none;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #333;
+        }
+
         .image-preview {
             max-width: 100%;
             max-height: 300px;
@@ -255,19 +281,34 @@
             </div>
 
             <!-- Photo Upload -->
-            <div class="upload-area" id="uploadArea">
+            <div class="upload-area" id="uploadArea"><!-- Live Photo Capture Section -->
+            <div id="photoCaptureSection" style="display: none; text-align: center; margin: 20px 0;">
+                <video id="photoPreview" autoplay playsinline muted width="100%" height="300" style="border-radius: 10px; display: none;"></video>
+                <canvas id="photoCanvas" width="640" height="480" style="display: none; border-radius: 10px; margin-top: 10px;"></canvas>
+                <div style="margin-top: 15px;">
+                    <button class="btn" id="startPhotoBtn">📷 Open Camera</button>
+                    <button class="btn btn-secondary" id="capturePhotoBtn" style="display: none;">📸 Capture Photo</button>
+                    <button class="btn btn-secondary" id="closePhotoBtn" style="display: none;">❌ Close Camera</button>
+                </div>
+            </div>
+
                 <p id="uploadText">📷 Click here or drag & drop your image</p>
                 <input type="file" id="mediaInput" accept="image/*" style="display: none;">
             </div>
 
             <!-- Video Recording -->
-            <div id="videoSection" style="display: none;">
-                <video id="videoPreview" width="100%" height="300" style="border-radius: 10px; margin: 10px 0;"></video>
-                <div style="text-align: center; margin: 20px 0;">
+            <!-- Video Recording -->
+            <div id="videoSection" style="display: none; text-align: center; margin: 20px 0;">
+                <!-- Controls first -->
+                <div style="margin-bottom: 15px;">
                     <button class="btn" id="startVideoBtn">🎬 Start Recording</button>
                     <button class="btn btn-secondary" id="stopVideoBtn" style="display: none;">⏹️ Stop Recording</button>
                 </div>
+
+                <!-- Then preview -->
+                <video id="videoPreview" width="100%" height="300" autoplay playsinline muted style="border-radius: 10px; display: none;"></video>
             </div>
+
 
             <!-- Audio Recording -->
             <div id="audioSection" style="display: none;">
@@ -280,9 +321,11 @@
 
             <div id="mediaPreview"></div>
             <div id="actionButtons" style="display: none;">
+                <button class="btn btn-secondary" id="deleteBtn">🗑 Delete</button>
                 <button class="btn" id="downloadBtn">💾 Download</button>
                 <button class="btn btn-secondary" id="shareBtn">📤 Share</button>
             </div>
+
         </div>
     </div>
 
@@ -659,6 +702,8 @@
                 videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 const videoPreview = document.getElementById('videoPreview');
                 videoPreview.srcObject = videoStream;
+                videoPreview.style.display = 'block';
+
                 
                 mediaRecorder = new MediaRecorder(videoStream);
                 recordedChunks = [];
@@ -701,7 +746,8 @@
             if (mediaRecorder && mediaRecorder.state === 'recording') {
                 mediaRecorder.stop();
                 videoStream.getTracks().forEach(track => track.stop());
-                
+                videoPreview.style.display = 'none';
+
                 document.getElementById('startVideoBtn').style.display = 'inline-block';
                 document.getElementById('stopVideoBtn').style.display = 'none';
             }
@@ -778,6 +824,22 @@
             showStatus(`${currentMediaType.charAt(0).toUpperCase() + currentMediaType.slice(1)} downloaded successfully!`, 'success');
         }
 
+        function deleteMedia() {
+            const mediaPreview = document.getElementById('mediaPreview');
+            const actionButtons = document.getElementById('actionButtons');
+            const mediaInput = document.getElementById('mediaInput');
+
+            // Clear preview area and reset variables
+            mediaPreview.innerHTML = '';
+            actionButtons.style.display = 'none';
+            uploadedMedia = null;
+
+            // Clear file input (so same file can be re-uploaded)
+            mediaInput.value = '';
+
+            showStatus('Media deleted successfully.', 'success');
+        }
+
         // Share media (dummy function)
         function shareMedia() {
             showStatus('Share feature coming soon! For now, you can download your media.', 'success');
@@ -791,6 +853,7 @@
         document.getElementById('stopVideoBtn').addEventListener('click', stopVideoRecording);
         document.getElementById('startAudioBtn').addEventListener('click', startAudioRecording);
         document.getElementById('stopAudioBtn').addEventListener('click', stopAudioRecording);
+        document.getElementById('deleteBtn').addEventListener('click', deleteMedia);
 
         // Initialize
         setupMediaUpload();

@@ -1,10 +1,12 @@
 from flask import Flask, render_template, request, jsonify, send_file
 import random
 import os
+import requests   # 👈 add this line
 from werkzeug.utils import secure_filename
 from llm import prompt_llm
 from functools import lru_cache
 from datetime import datetime
+
 
 # Simple in-memory cache for repeated prompts (reset on server restart)
 # @lru_cache(maxsize=10)
@@ -19,10 +21,20 @@ def get_cached_task_for_location(location_type, lat=None, lon=None):
         else:
             time_hint = "It's evening, suggest something reflective or relaxing."
 
+        # 🌙 Safety considerations (NEW — add this right after time detection)
+        if hour >= 19 or hour < 6:  # 8PM–6AM
+            safety_hint = (
+                "It's nighttime, so avoid tasks involving strangers or dark areas. "
+                "Focus on calm, solo, or reflective activities instead."
+            )
+        else:
+            safety_hint = "It's daytime, so interactive and social tasks are fine."
+            
         # 🌦 Weather condition
         weather_hint = ""
         if lat is not None and lon is not None:
             weather_hint = get_weather_hint(lat, lon)
+            print(f"[DEBUG] Weather hint: {weather_hint}")  # 👈 ADD THIS LINE HERE
 
         # 🎲 Add variation to keep tasks fresh
         variation_hint = random.choice([
@@ -40,14 +52,16 @@ def get_cached_task_for_location(location_type, lat=None, lon=None):
     f"Current time of day: {datetime.now().strftime('%H:%M')}.\n"
     f"{time_hint}\n"
     f"{weather_hint}\n"
+    f"{safety_hint}\n"     # 👈 add this line
     f"{variation_hint}\n"
     f"Based on this context, generate a **new**, unique, and fun challenge they can do now.\n"
     f"The task should feel appropriate for the environment and conditions.\n"
     f"Keep it concise (1 sentence), easy to understand, and suitable for someone walking outside.\n"
-    f"Do not repeat ideas you've given before. Avoid using emojis or hashtags."
-    f"Their coordinates are approximately {lat:.4f}, {lon:.4f}."
+    f"Do not repeat ideas you've given before. Avoid using emojis or hashtags.\n"
+    f"Their coordinates are approximately {lat:.4f}, {lon:.4f}.\n"
     f"Ensure this task is **different** from previous ones in style or action."
 )
+
 
         # Save prompt for inspection
         os.makedirs('results', exist_ok=True)
@@ -216,7 +230,7 @@ def generate_task():
         location_type = get_location_type(lat, lon)
 
         # First, try LLM (cached)
-        task = get_cached_task_for_location(location_type)
+        task = get_cached_task_for_location(location_type, lat, lon)
 
         # Track source
         source = "LLM"
