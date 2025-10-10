@@ -1,19 +1,25 @@
 from flask import Flask, render_template, request, jsonify, send_file
 import random
 import os
-import requests   # 👈 add this line
+import requests
 from werkzeug.utils import secure_filename
 from llm import prompt_llm
-from functools import lru_cache
 from datetime import datetime
+import traceback
 
-
-# Simple in-memory cache for repeated prompts (reset on server restart)
-# @lru_cache(maxsize=10)
+# --------------------------
+# Generate task for location
+# --------------------------
 def get_cached_task_for_location(location_type, lat=None, lon=None):
     try:
+        print(f"[DEBUG] Start get_cached_task_for_location: {location_type} ({lat}, {lon})")
+
+        weather_hint = get_weather_hint(lat, lon)
+        print(f"[DEBUG] Weather hint: {weather_hint}")
+        nearby_places = get_nearby_places(lat, lon)
+        print(f"[DEBUG] Found {len(nearby_places)} nearby places")
+
         # Default placeholders
-        weather_hint = ""
         nearby_hint = ""
         variation_hint = ""
         freshness_hint = ""
@@ -36,12 +42,8 @@ def get_cached_task_for_location(location_type, lat=None, lon=None):
         else:
             safety_hint = "It's daytime, so interactive and social tasks are fine."
 
-        # 🌦 Weather condition
-        if lat is not None and lon is not None:
-            weather_hint = get_weather_hint(lat, lon)
-            print(f"[DEBUG] Weather hint: {weather_hint}")
-
         # 🗺️ Nearby place detection
+        main_place = None
         if lat is not None and lon is not None:
             nearby_places = get_nearby_places(lat, lon)
             if nearby_places:
@@ -87,7 +89,7 @@ def get_cached_task_for_location(location_type, lat=None, lon=None):
             "Change up the interaction style for variety."
         ])
 
-                # 🧠 Final prompt — tuned to avoid repetition and bland introspection
+        # 🧠 Final prompt
         prompt = (
             f"You are a playful assistant generating real-world micro-challenges.\n"
             f"The user is in a {location_type} environment.\n"
@@ -109,24 +111,27 @@ def get_cached_task_for_location(location_type, lat=None, lon=None):
             f"Ensure this task is **different** from previous ones in both action and tone."
         )
 
-        # Save prompt for inspection
         os.makedirs('results', exist_ok=True)
         with open('results/prompts.txt', 'w') as f:
             f.write(prompt + "\n")
 
+        print(f"[DEBUG] TOGETHER_API_KEY exists: {bool(os.getenv('TOGETHER_API_KEY'))}")
         task = prompt_llm(prompt)
-        return task.strip(), locals().get("main_place") if "main_place" in locals() else None
+        return task.strip(), main_place
 
 
     except Exception as e:
+        import traceback
+        print("[ERROR] get_cached_task_for_location failed:")
+        print(traceback.format_exc())
         print(f"[ERROR] Prompt generation failed: {e}")
-        return None
+        return "⚠️ Task generation failed due to AI error.", None
+
+
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-
-# Create uploads directory if it doesn't exist
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Location-based tasks with social and creative elements
@@ -315,6 +320,11 @@ def get_location_type(lat, lon):
     try:
         url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json&zoom=18&addressdetails=1"
         res = requests.get(url, headers={"User-Agent": "hoppi-app"})
+        print(f"[DEBUG] Calling Nominatim: {url}")
+        res = requests.get(url, headers={"User-Agent": "hoppi-app"}, timeout=10)
+        print(f"[DEBUG] Nominatim status {res.status_code}")
+        data = res.json()
+        print(f"[DEBUG] Nominatim response keys: {list(data.keys())}")
         data = res.json()
         tags = data.get("address", {})
         
@@ -347,34 +357,31 @@ def generate_task():
         data = request.get_json()
         lat = data.get('latitude')
         lon = data.get('longitude')
+        print(f"[DEBUG] Received lat={lat}, lon={lon}")
 
         if not lat or not lon:
             return jsonify({'error': 'Location data required'}), 400
 
         location_type = get_location_type(lat, lon)
+        print(f"[DEBUG] location_type={location_type}")
 
-        # First, try LLM (cached)
         task, selected_place = get_cached_task_for_location(location_type, lat, lon)
-
-        # Track source
-        source = "LLM"
-
-        # Fallback if LLM failed
-        if not task:
-            task = random.choice(TASKS_BY_LOCATION.get(location_type, TASKS_BY_LOCATION['street']))
-            source = "fallback"
+        print(f"[DEBUG] task={task}")
 
         return jsonify({
-        'task': task,
-        'location_type': location_type,
-        'coordinates': {'lat': lat, 'lon': lon},
-        'source': source,  # 👈 this tells you where the task came from
-        'selected_place': selected_place if 'selected_place' in locals() else None
-    })
-
+            'task': task,
+            'location_type': location_type,
+            'coordinates': {'lat': lat, 'lon': lon},
+            'source': "LLM",
+            'selected_place': selected_place
+        })
 
     except Exception as e:
+        print("[ERROR] Exception in generate-task:")
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
+
+
 
 @app.route('/upload', methods=['POST'])
 def upload_image():
