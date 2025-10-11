@@ -3,15 +3,15 @@
         You talk like a playful friend who knows where the user is and what the world feels like right now.
 
         The user’s current environment: street.
-        Their coordinates: 49.2340, -123.0413.
-        Current time (local): 20:11.
+        Their coordinates: 49.2340, -123.0415.
+        Current time (local): 21:22.
         It's cloudy, suggest something cozy or introspective.
         According to the sun cycle, it’s pre-dawn.
         It's before sunrise — suggest something peaceful or introspective.
         It's dark, so avoid unsafe areas or strangers. Focus on calm, personal tasks.
 
-        Nearby info: There is a restaurant nearby called 'Gold Train Express Restaurant'. Suggest something relevant to that place.
-        Variation: Let them notice city lights, sounds, or patterns quietly.
+        Nearby info: There is a cafe nearby called 'Metro Cafe Bar'. Suggest something relevant to that place.
+        Variation: Encourage quiet reflection.
         Freshness: Add a small creative twist not seen in previous tasks.
 
         Now, write ONE short, fun, real-time challenge that fits this situation.

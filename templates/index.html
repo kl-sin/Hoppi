@@ -105,50 +105,17 @@
             /* display: none; */
         }
 
-        .upload-area {
-            border: 3px dashed #667eea;
-            border-radius: 15px;
-            padding: 40px;
-            margin: 20px 0;
-            cursor: pointer;
-            transition: all 0.3s ease;
+
+        #photoCanvas {
+        display: block;
+        margin: 10px auto;
+        border-radius: 10px;
+        max-width: 100%;
+        max-height: 300px;
+        object-fit: cover;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
 
-        .upload-area:hover {
-            background: #f0f4ff;
-            border-color: #5a6fd8;
-        }
-
-        .upload-area.dragover {
-            background: #e8f4fd;
-            border-color: #4c63d2;
-        }
-
-        .polaroid {
-            width: 300px;
-            background: white;
-            padding: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            border-radius: 10px;
-            margin: 20px auto;
-            text-align: center;
-            font-family: 'Courier New', monospace;
-        }
-
-        .polaroid img {
-            width: 100%;
-            border-radius: 5px;
-        }
-
-        .polaroid textarea {
-            width: 100%;
-            border: none;
-            resize: none;
-            text-align: center;
-            margin-top: 10px;
-            font-size: 0.9em;
-            color: #333;
-        }
 
         .image-preview {
             max-width: 100%;
@@ -281,22 +248,30 @@
             </div>
 
             <!-- Photo Upload -->
-            <div class="upload-area" id="uploadArea"><!-- Live Photo Capture Section -->
-            <div id="photoCaptureSection" style="display: none; text-align: center; margin: 20px 0;">
-                <video id="photoPreview" autoplay playsinline muted width="100%" height="300" style="border-radius: 10px; display: none;"></video>
-                <canvas id="photoCanvas" width="640" height="480" style="display: none; border-radius: 10px; margin-top: 10px;"></canvas>
-                <div style="margin-top: 15px;">
-                    <button class="btn" id="startPhotoBtn">📷 Open Camera</button>
-                    <button class="btn btn-secondary" id="capturePhotoBtn" style="display: none;">📸 Capture Photo</button>
-                    <button class="btn btn-secondary" id="closePhotoBtn" style="display: none;">❌ Close Camera</button>
-                </div>
-            </div>
+            <!-- Photo Capture -->
+<!-- Photo Capture -->
+<div id="photoCaptureSection" style="display: block; text-align: center; margin: 20px 0;">
+    <!-- Preview area -->
+    <video id="photoPreview" autoplay playsinline muted width="100%" height="300"
+        style="border-radius: 10px; display: none; object-fit: cover;"></video>
+    <canvas id="photoCanvas" width="640" height="480"
+        style="display: none; border-radius: 10px; margin-top: 10px; max-width: 100%; max-height: 300px; object-fit: cover;"></canvas>
 
-                <p id="uploadText">📷 Click here or drag & drop your image</p>
-                <input type="file" id="mediaInput" accept="image/*" style="display: none;">
-            </div>
+    <!-- Controls (consistent with video/audio layout) -->
+    <div style="margin-bottom: 15px;">
+        <button class="btn" id="startPhotoBtn">📷 Start Photo</button>
+        <button class="btn btn-secondary" id="capturePhotoBtn" style="display: none;">📸 Capture</button>
+        <button class="btn btn-secondary" id="closePhotoBtn" style="display: none;">⏹️ Stop</button>
+    </div>
+</div>
 
-            <!-- Video Recording -->
+
+<!-- Hidden dummy elements (for JS stability) -->
+<p id="uploadText" style="display:none;"></p>
+<input type="file" id="mediaInput" style="display:none;">
+
+</div>
+
             <!-- Video Recording -->
             <div id="videoSection" style="display: none; text-align: center; margin: 20px 0;">
                 <!-- Controls first -->
@@ -644,33 +619,26 @@
 
         // Set media type
         function setMediaType(type) {
-            currentMediaType = type;
-            
-            // Update button styles
-            document.getElementById('photoBtn').className = type === 'photo' ? 'btn' : 'btn btn-secondary';
-            document.getElementById('videoBtn').className = type === 'video' ? 'btn' : 'btn btn-secondary';
-            document.getElementById('audioBtn').className = type === 'audio' ? 'btn' : 'btn btn-secondary';
-            
-            // Show/hide sections
-            document.getElementById('uploadArea').style.display = type === 'photo' ? 'block' : 'none';
-            document.getElementById('videoSection').style.display = type === 'video' ? 'block' : 'none';
-            document.getElementById('audioSection').style.display = type === 'audio' ? 'block' : 'none';
-            
-            // Update upload text
-            const uploadText = document.getElementById('uploadText');
-            const mediaInput = document.getElementById('mediaInput');
-            
-            if (type === 'photo') {
-                uploadText.textContent = '📷 Click here or drag & drop your image';
-                mediaInput.accept = 'image/*';
-            } else if (type === 'video') {
-                uploadText.textContent = '📹 Click here or drag & drop your video';
-                mediaInput.accept = 'video/*';
-            } else if (type === 'audio') {
-                uploadText.textContent = '🎤 Click here or drag & drop your audio';
-                mediaInput.accept = 'audio/*';
-            }
-        }
+    currentMediaType = type;
+
+    // Update button styles
+    document.getElementById('photoBtn').className = type === 'photo' ? 'btn' : 'btn btn-secondary';
+    document.getElementById('videoBtn').className = type === 'video' ? 'btn' : 'btn btn-secondary';
+    document.getElementById('audioBtn').className = type === 'audio' ? 'btn' : 'btn btn-secondary';
+
+    // Show/hide sections
+    document.getElementById('photoCaptureSection').style.display = type === 'photo' ? 'block' : 'none';
+    document.getElementById('videoSection').style.display = type === 'video' ? 'block' : 'none';
+    document.getElementById('audioSection').style.display = type === 'audio' ? 'block' : 'none';
+
+    // ❌ Remove this part completely — these elements no longer exist
+    // const uploadText = document.getElementById('uploadText');
+    // const mediaInput = document.getElementById('mediaInput');
+    // if (type === 'photo') { ... }
+    // else if (type === 'video') { ... }
+    // else if (type === 'audio') { ... }
+}
+
 
         // Handle media upload
         function setupMediaUpload() {
@@ -760,110 +728,132 @@
 
         // Video recording functions
         async function startVideoRecording() {
-            try {
-                videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                const videoPreview = document.getElementById('videoPreview');
-                videoPreview.srcObject = videoStream;
-                videoPreview.style.display = 'block';
+    try {
+        videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        const videoPreview = document.getElementById('videoPreview');
+        videoPreview.srcObject = videoStream;
+        videoPreview.style.display = 'block';
 
-                
-                mediaRecorder = new MediaRecorder(videoStream);
-                recordedChunks = [];
-                
-                mediaRecorder.ondataavailable = function(event) {
-                    if (event.data.size > 0) {
-                        recordedChunks.push(event.data);
-                    }
-                };
-                
-                mediaRecorder.onstop = function() {
-                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
-                    const url = URL.createObjectURL(blob);
-                    
-                    const video = document.createElement('video');
-                    video.src = url;
-                    video.controls = true;
-                    video.style.width = '100%';
-                    video.style.maxHeight = '300px';
-                    video.style.borderRadius = '10px';
-                    
-                    document.getElementById('mediaPreview').innerHTML = '';
-                    document.getElementById('mediaPreview').appendChild(video);
-                    document.getElementById('actionButtons').style.display = 'block';
-                    
-                    uploadedMedia = blob;
-                    showStatus('Video recorded! You can now download or share it.', 'success');
-                };
-                
-                mediaRecorder.start();
-                document.getElementById('startVideoBtn').style.display = 'none';
-                document.getElementById('stopVideoBtn').style.display = 'inline-block';
-                
-            } catch (error) {
-                showStatus('Error accessing camera: ' + error.message, 'error');
+        mediaRecorder = new MediaRecorder(videoStream);
+        recordedChunks = [];
+
+        mediaRecorder.ondataavailable = function(event) {
+            if (event.data.size > 0) {
+                recordedChunks.push(event.data);
             }
-        }
+        };
 
-        function stopVideoRecording() {
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-                mediaRecorder.stop();
-                videoStream.getTracks().forEach(track => track.stop());
-                videoPreview.style.display = 'none';
+        mediaRecorder.onstop = function() {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
 
-                document.getElementById('startVideoBtn').style.display = 'inline-block';
-                document.getElementById('stopVideoBtn').style.display = 'none';
-            }
+            const video = document.createElement('video');
+            video.src = url;
+            video.controls = true;
+            video.style.width = '100%';
+            video.style.maxHeight = '300px';
+            video.style.borderRadius = '10px';
+
+            const mediaPreview = document.getElementById('mediaPreview');
+            mediaPreview.innerHTML = '';
+            mediaPreview.appendChild(video);
+            document.getElementById('actionButtons').style.display = 'block';
+
+            uploadedMedia = blob;
+            showStatus('🎬 Video recorded! You can now download or share it.', 'success');
+
+            // 👇 Smooth scroll to new video preview
+            setTimeout(() => {
+                mediaPreview.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        };
+
+        mediaRecorder.start();
+        document.getElementById('startVideoBtn').style.display = 'none';
+        document.getElementById('stopVideoBtn').style.display = 'inline-block';
+
+        showStatus('🎥 Recording started...', 'success');
+        videoPreview.scrollIntoView({ behavior: 'smooth', block: 'center' }); // scroll to camera
+    } catch (error) {
+        showStatus('❌ Error accessing camera: ' + error.message, 'error');
+    }
+}
+
+function stopVideoRecording() {
+    const videoPreview = document.getElementById('videoPreview');
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        if (videoStream) {
+            videoStream.getTracks().forEach(track => track.stop());
         }
+        videoPreview.style.display = 'none';
+
+        document.getElementById('startVideoBtn').style.display = 'inline-block';
+        document.getElementById('stopVideoBtn').style.display = 'none';
+    }
+}
+
 
         // Audio recording functions
         async function startAudioRecording() {
-            try {
-                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                
-                mediaRecorder = new MediaRecorder(audioStream);
-                recordedChunks = [];
-                
-                mediaRecorder.ondataavailable = function(event) {
-                    if (event.data.size > 0) {
-                        recordedChunks.push(event.data);
-                    }
-                };
-                
-                mediaRecorder.onstop = function() {
-                    const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-                    const url = URL.createObjectURL(blob);
-                    
-                    const audio = document.createElement('audio');
-                    audio.src = url;
-                    audio.controls = true;
-                    audio.style.width = '100%';
-                    
-                    document.getElementById('mediaPreview').innerHTML = '';
-                    document.getElementById('mediaPreview').appendChild(audio);
-                    document.getElementById('actionButtons').style.display = 'block';
-                    
-                    uploadedMedia = blob;
-                    showStatus('Audio recorded! You can now download or share it.', 'success');
-                };
-                
-                mediaRecorder.start();
-                document.getElementById('startAudioBtn').style.display = 'none';
-                document.getElementById('stopAudioBtn').style.display = 'inline-block';
-                
-            } catch (error) {
-                showStatus('Error accessing microphone: ' + error.message, 'error');
+    try {
+        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+        mediaRecorder = new MediaRecorder(audioStream);
+        recordedChunks = [];
+
+        mediaRecorder.ondataavailable = function(event) {
+            if (event.data.size > 0) {
+                recordedChunks.push(event.data);
             }
+        };
+
+        mediaRecorder.onstop = function() {
+            const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+            const url = URL.createObjectURL(blob);
+
+            const audio = document.createElement('audio');
+            audio.src = url;
+            audio.controls = true;
+            audio.style.width = '100%';
+
+            const mediaPreview = document.getElementById('mediaPreview');
+            mediaPreview.innerHTML = '';
+            mediaPreview.appendChild(audio);
+            document.getElementById('actionButtons').style.display = 'block';
+
+            uploadedMedia = blob;
+            showStatus('🎧 Audio recorded! You can now download or share it.', 'success');
+
+            // 👇 Smooth scroll to new audio preview
+            setTimeout(() => {
+                mediaPreview.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        };
+
+        mediaRecorder.start();
+        document.getElementById('startAudioBtn').style.display = 'none';
+        document.getElementById('stopAudioBtn').style.display = 'inline-block';
+
+        showStatus('🎙️ Recording started...', 'success');
+        document.getElementById('audioSection').scrollIntoView({ behavior: 'smooth', block: 'center' }); // scroll to mic view
+    } catch (error) {
+        showStatus('❌ Error accessing microphone: ' + error.message, 'error');
+    }
+}
+
+function stopAudioRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        if (audioStream) {
+            audioStream.getTracks().forEach(track => track.stop());
         }
 
-        function stopAudioRecording() {
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-                mediaRecorder.stop();
-                audioStream.getTracks().forEach(track => track.stop());
-                
-                document.getElementById('startAudioBtn').style.display = 'inline-block';
-                document.getElementById('stopAudioBtn').style.display = 'none';
-            }
-        }
+        document.getElementById('startAudioBtn').style.display = 'inline-block';
+        document.getElementById('stopAudioBtn').style.display = 'none';
+    }
+}
+
 
         // Download media
         function downloadMedia() {
@@ -891,16 +881,32 @@
             const actionButtons = document.getElementById('actionButtons');
             const mediaInput = document.getElementById('mediaInput');
 
-            // Clear preview area and reset variables
+            // Clear preview and reset data
             mediaPreview.innerHTML = '';
             actionButtons.style.display = 'none';
             uploadedMedia = null;
+            if (mediaInput) mediaInput.value = '';
 
-            // Clear file input (so same file can be re-uploaded)
-            mediaInput.value = '';
+            // 🧭 Reset photo/video/audio sections depending on the current mode
+            if (currentMediaType === 'photo') {
+                document.getElementById('photoPreview').style.display = 'none';
+                document.getElementById('photoCanvas').style.display = 'none';
+                document.getElementById('startPhotoBtn').style.display = 'inline-block';
+                document.getElementById('capturePhotoBtn').style.display = 'none';
+                document.getElementById('closePhotoBtn').style.display = 'none';
+            } else if (currentMediaType === 'video') {
+                document.getElementById('videoPreview').style.display = 'none';
+                document.getElementById('startVideoBtn').style.display = 'inline-block';
+                document.getElementById('stopVideoBtn').style.display = 'none';
+            } else if (currentMediaType === 'audio') {
+                document.getElementById('audioPreview').style.display = 'none';
+                document.getElementById('startAudioBtn').style.display = 'inline-block';
+                document.getElementById('stopAudioBtn').style.display = 'none';
+            }
 
-            showStatus('Media deleted successfully.', 'success');
+            showStatus('🗑 Media deleted successfully.', 'success');
         }
+
 
         // Share media (dummy function)
         function shareMedia() {
@@ -917,8 +923,121 @@
         document.getElementById('stopAudioBtn').addEventListener('click', stopAudioRecording);
         document.getElementById('deleteBtn').addEventListener('click', deleteMedia);
 
+// 🎥 Photo Capture Functions (Improved – fixed size + auto scroll)
+let photoStream = null;
+
+document.getElementById('startPhotoBtn').addEventListener('click', async () => {
+    try {
+        photoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const video = document.getElementById('photoPreview');
+
+        video.srcObject = photoStream;
+        video.style.display = 'block';
+        document.getElementById('photoCanvas').style.display = 'none';
+
+        document.getElementById('startPhotoBtn').style.display = 'none';
+        document.getElementById('capturePhotoBtn').style.display = 'inline-block';
+        document.getElementById('closePhotoBtn').style.display = 'inline-block';
+
+        showStatus('Camera ready! Tap 📸 Capture to take a photo.', 'success');
+        video.scrollIntoView({ behavior: 'smooth', block: 'center' }); // 👇 auto scroll to camera
+    } catch (err) {
+        showStatus('❌ Unable to access camera: ' + err.message, 'error');
+    }
+});
+
+document.getElementById('capturePhotoBtn').addEventListener('click', () => {
+    const video = document.getElementById('photoPreview');
+    const canvas = document.getElementById('photoCanvas');
+    const context = canvas.getContext('2d');
+
+    // ✅ Get the displayed size of the video (what the user actually sees)
+    const videoRect = video.getBoundingClientRect();
+
+    // ✅ Match canvas to the *displayed* dimensions, not native resolution
+    canvas.width = videoRect.width;
+    canvas.height = videoRect.height;
+
+    // ✅ Scale drawImage so it visually matches the same viewport crop
+    const aspectVideo = video.videoWidth / video.videoHeight;
+    const aspectDisplay = videoRect.width / videoRect.height;
+
+    let sx = 0, sy = 0, sw = video.videoWidth, sh = video.videoHeight;
+
+    // If the aspect ratios differ, crop the video frame proportionally
+    if (aspectVideo > aspectDisplay) {
+        // video is wider — crop horizontally
+        const newWidth = video.videoHeight * aspectDisplay;
+        sx = (video.videoWidth - newWidth) / 2;
+        sw = newWidth;
+    } else if (aspectVideo < aspectDisplay) {
+        // video is taller — crop vertically
+        const newHeight = video.videoWidth / aspectDisplay;
+        sy = (video.videoHeight - newHeight) / 2;
+        sh = newHeight;
+    }
+
+    // ✅ Draw the cropped video frame scaled to the canvas
+    context.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+
+    // Stop camera feed
+    if (photoStream) {
+        photoStream.getTracks().forEach(track => track.stop());
+        photoStream = null;
+    }
+
+    // Hide video
+    video.style.display = 'none';
+    document.getElementById('capturePhotoBtn').style.display = 'none';
+    document.getElementById('closePhotoBtn').style.display = 'none';
+
+    // Convert canvas to blob and show in mediaPreview
+    canvas.toBlob((blob) => {
+        uploadedMedia = blob;
+
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(blob);
+        img.style.display = 'block';
+        img.style.margin = '10px auto';
+        img.style.borderRadius = '10px';
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '300px';
+        img.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+
+        const mediaPreview = document.getElementById('mediaPreview');
+        mediaPreview.innerHTML = '';
+        mediaPreview.appendChild(img);
+
+        document.getElementById('actionButtons').style.display = 'block';
+        showStatus('📸 Photo captured! You can download or delete it.', 'success');
+
+        // 👇 Smooth scroll to preview
+        setTimeout(() => {
+            mediaPreview.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+    }, 'image/jpeg');
+});
+
+
+document.getElementById('closePhotoBtn').addEventListener('click', () => {
+    if (photoStream) {
+        photoStream.getTracks().forEach(track => track.stop());
+        photoStream = null;
+    }
+
+    document.getElementById('photoPreview').style.display = 'none';
+    document.getElementById('photoCanvas').style.display = 'none';
+    document.getElementById('startPhotoBtn').style.display = 'inline-block';
+    document.getElementById('capturePhotoBtn').style.display = 'none';
+    document.getElementById('closePhotoBtn').style.display = 'none';
+
+    showStatus('Camera stopped.', 'success');
+});
+
+
+
         // Initialize
-        setupMediaUpload();
+        // setupMediaUpload();
         getLocation();
     </script>
 </body>
