@@ -4,9 +4,44 @@ import os
 import requests
 from werkzeug.utils import secure_filename
 from llm import prompt_llm
-from datetime import datetime
+from datetime import datetime, timezone
 import traceback
 
+def get_day_period(lat, lon):
+    """
+    Determine whether it's morning, afternoon, or evening
+    based on actual sunrise/sunset times from the Sunrise-Sunset API.
+    """
+    try:
+        url = f"https://api.sunrise-sunset.org/json?lat={lat}&lng={lon}&formatted=0"
+        res = requests.get(url)
+        data = res.json()["results"]
+
+        sunrise = datetime.fromisoformat(data["sunrise"]).replace(tzinfo=timezone.utc)
+        sunset = datetime.fromisoformat(data["sunset"]).replace(tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+
+        if now < sunrise:
+            return "pre-dawn"
+        elif sunrise <= now < (sunrise.replace(hour=sunrise.hour + 4)):
+            return "morning"
+        elif (sunrise.replace(hour=sunrise.hour + 4)) <= now < (sunset.replace(hour=sunset.hour - 2)):
+            return "afternoon"
+        elif (sunset.replace(hour=sunset.hour - 2)) <= now < sunset:
+            return "evening"
+        else:
+            return "night"
+
+    except Exception as e:
+        print(f"[ERROR] Sunrise-Sunset API failed: {e}")
+        # fallback
+        hour = datetime.now().hour
+        if hour < 12:
+            return "morning"
+        elif hour < 18:
+            return "afternoon"
+        else:
+            return "night"
 # --------------------------
 # Generate task for location
 # --------------------------
@@ -25,22 +60,26 @@ def get_cached_task_for_location(location_type, lat=None, lon=None):
         freshness_hint = ""
 
         # 🌞 Time of day
-        hour = datetime.now().hour
-        if hour < 12:
-            time_hint = "It's morning, suggest something energizing."
-        elif hour < 17:
-            time_hint = "It's afternoon, suggest something social."
+               # 🌞 Time of day
+        period = get_day_period(lat, lon)
+        if period == "pre-dawn":
+            time_hint = "It's before sunrise — suggest something peaceful or introspective."
+        elif period == "morning":
+            time_hint = "It's morning, suggest something energizing and fresh."
+        elif period == "afternoon":
+            time_hint = "It's afternoon, suggest something social or creative."
+        elif period == "evening":
+            time_hint = "It's evening, suggest something calm and reflective."
         else:
-            time_hint = "It's evening, suggest something reflective or relaxing."
+            time_hint = "It's night, suggest something quiet, safe, and introspective."
+
 
         # 🌙 Safety considerations
-        if hour >= 20 or hour < 6:
-            safety_hint = (
-                "It's nighttime, so avoid tasks involving strangers or dark areas. "
-                "Focus on calm, solo, or reflective activities instead."
-            )
+        if period in ["evening", "night", "pre-dawn"]:
+            safety_hint = "It's dark, so avoid unsafe areas or strangers. Focus on calm, personal tasks."
         else:
-            safety_hint = "It's daytime, so interactive and social tasks are fine."
+            safety_hint = "It's bright outside, so social or playful tasks are great."
+
 
         # 🗺️ Nearby place detection
         main_place = None
@@ -58,8 +97,10 @@ def get_cached_task_for_location(location_type, lat=None, lon=None):
 
         # 🎲 Variation hint
         daytime_variations = [
+            "Be energetic and playful.",
+            "Encourage interaction with others.",
             "Make it involve a stranger.",
-            "Encourage them to take a photo.",
+            "Encourage them to take a photo, video or record audio.",
             "Make it feel like a mini-game.",
             "Include movement or interaction with the environment.",
             "Encourage a quick creative act.",
@@ -67,6 +108,7 @@ def get_cached_task_for_location(location_type, lat=None, lon=None):
             "Include something involving color or sound."
         ]
         nighttime_variations = [
+            "Be soft and gentle.",
             "Encourage quiet reflection.",
             "Focus on creativity or mindfulness.",
             "Suggest a calming or self-reflective act.",
@@ -77,7 +119,7 @@ def get_cached_task_for_location(location_type, lat=None, lon=None):
         ]
 
         variation_hint = random.choice(
-            nighttime_variations if hour >= 20 or hour < 6 else daytime_variations
+            nighttime_variations if period in ["evening", "night", "pre-dawn"] else daytime_variations
         )
 
         # 🌀 Freshness randomizer — always defined
@@ -90,26 +132,41 @@ def get_cached_task_for_location(location_type, lat=None, lon=None):
         ])
 
         # 🧠 Final prompt
-        prompt = (
-            f"You are a playful assistant generating real-world micro-challenges.\n"
-            f"The user is in a {location_type} environment.\n"
-            f"Current time of day: {datetime.now().strftime('%H:%M')}.\n"
-            f"{time_hint}\n"
-            f"{weather_hint}\n"
-            f"{safety_hint}\n"
-            f"{nearby_hint}\n"
-            f"{variation_hint}\n"
-            f"{freshness_hint}\n"
-            "⚠️ Avoid starting the challenge with overused phrases like "
-            "'Take a moment', 'Pause and observe', or 'Sit quietly'. "
-            "Instead, begin dynamically with an action verb or clear instruction "
-            "(e.g., 'Find', 'Look for', 'Create', 'Try', 'Notice').\n"
-            "Vary tone: some challenges should feel playful, others curious or mindful.\n"
-            "Keep the challenge short (1 sentence), clear, and realistic for someone walking or outdoors.\n"
-            "Never repeat previous ideas. Avoid emojis or hashtags.\n"
-            f"Their coordinates are approximately {lat:.4f}, {lon:.4f}.\n"
-            f"Ensure this task is **different** from previous ones in both action and tone."
-        )
+        prompt = f"""
+        You are a warm, witty real-world assistant named Hoppi.
+        You talk like a playful friend who knows where the user is and what the world feels like right now.
+
+        The user’s current environment: {location_type}.
+        Their coordinates: {lat:.4f}, {lon:.4f}.
+        Current time (local): {datetime.now().strftime('%H:%M')}.
+        {weather_hint}
+        According to the sun cycle, it’s {period}.
+        {time_hint}
+        {safety_hint}
+
+        Nearby info: {nearby_hint}
+        Variation: {variation_hint}
+        Freshness: {freshness_hint}
+
+        Now, write ONE short, fun, real-time challenge that fits this situation.
+        ✨ Make it sound natural — like a friend suggesting something spontaneous.
+        💬 You can briefly mention the time of day like it's morning, afternoon or evening and weather to make it feel live.
+        🎯 Use vivid action verbs and sensory words (touch, sound, color, etc.).
+        ❌ Don’t use emojis, hashtags, or repeated openings like "Take a moment".
+        Don't mention the exact time directly.
+        ✅ Example tone:
+        - “Since it’s bright and breezy, find something that glows in sunlight and take a close-up photo.”
+        - “It’s quiet before sunrise — record the first sound you hear and describe how it feels.”
+        - “Rain’s coming down? Find a reflection and snap a photo of what’s upside down.”
+
+        Keep the response under 30 words.
+        Make it simple enough that a 12-year-old could understand.
+        It should sound spontaneous and doable without any tool right now.
+        Do NOT use poetic language or metaphors.
+        Assumpe the user is alone and has only phone in hand.
+
+        """
+
 
         os.makedirs('results', exist_ok=True)
         with open('results/prompts.txt', 'w') as f:

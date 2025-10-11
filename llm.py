@@ -17,7 +17,7 @@ print(f"[DEBUG] TOGETHER_API_KEY exists: {bool(TOGETHER_API_KEY)}")
 client = Together(api_key=TOGETHER_API_KEY)
 
 def prompt_llm(prompt, with_linebreak=False):
-    model = "meta-llama/Meta-Llama-3-8B-Instruct-Lite"
+    model = "openai/gpt-oss-20b"
     print(f"[DEBUG] Sending prompt to Together API (model={model})")
 
     response = client.chat.completions.create(
