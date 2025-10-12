@@ -1,307 +1,71 @@
+# server.py (Flask)
 from flask import Flask, render_template, request, jsonify, send_file
-import random
-import os
-import requests
+import os, json, uuid, random, traceback, requests
+from datetime import datetime, timezone, timedelta
+from pathlib import Path
 from werkzeug.utils import secure_filename
 from llm import prompt_llm
-from datetime import datetime, timezone
-import traceback
-
-def get_day_period(lat, lon):
-    """
-    Determine whether it's morning, afternoon, or evening
-    based on actual sunrise/sunset times from the Sunrise-Sunset API.
-    """
-    try:
-        url = f"https://api.sunrise-sunset.org/json?lat={lat}&lng={lon}&formatted=0"
-        res = requests.get(url)
-        data = res.json()["results"]
-
-        sunrise = datetime.fromisoformat(data["sunrise"]).replace(tzinfo=timezone.utc)
-        sunset = datetime.fromisoformat(data["sunset"]).replace(tzinfo=timezone.utc)
-        now = datetime.now(timezone.utc)
-
-        if now < sunrise:
-            return "pre-dawn"
-        elif sunrise <= now < (sunrise.replace(hour=sunrise.hour + 4)):
-            return "morning"
-        elif (sunrise.replace(hour=sunrise.hour + 4)) <= now < (sunset.replace(hour=sunset.hour - 2)):
-            return "afternoon"
-        elif (sunset.replace(hour=sunset.hour - 2)) <= now < sunset:
-            return "evening"
-        else:
-            return "night"
-
-    except Exception as e:
-        print(f"[ERROR] Sunrise-Sunset API failed: {e}")
-        # fallback
-        hour = datetime.now().hour
-        if hour < 12:
-            return "morning"
-        elif hour < 18:
-            return "afternoon"
-        else:
-            return "night"
-# --------------------------
-# Generate task for location
-# --------------------------
-def get_cached_task_for_location(location_type, lat=None, lon=None):
-    try:
-        print(f"[DEBUG] Start get_cached_task_for_location: {location_type} ({lat}, {lon})")
-
-        weather_hint = get_weather_hint(lat, lon)
-        print(f"[DEBUG] Weather hint: {weather_hint}")
-        nearby_places = get_nearby_places(lat, lon)
-        print(f"[DEBUG] Found {len(nearby_places)} nearby places")
-
-        # Default placeholders
-        nearby_hint = ""
-        variation_hint = ""
-        freshness_hint = ""
-
-        # 🌞 Time of day
-               # 🌞 Time of day
-        period = get_day_period(lat, lon)
-        if period == "pre-dawn":
-            time_hint = "It's before sunrise — suggest something peaceful or introspective."
-        elif period == "morning":
-            time_hint = "It's morning, suggest something energizing and fresh."
-        elif period == "afternoon":
-            time_hint = "It's afternoon, suggest something social or creative."
-        elif period == "evening":
-            time_hint = "It's evening, suggest something calm and reflective."
-        else:
-            time_hint = "It's night, suggest something quiet, safe, and introspective."
-
-
-        # 🌙 Safety considerations
-        if period in ["evening", "night", "pre-dawn"]:
-            safety_hint = "It's dark, so avoid unsafe areas or strangers. Focus on calm, personal tasks."
-        else:
-            safety_hint = "It's bright outside, so social or playful tasks are great."
-
-
-        # 🗺️ Nearby place detection
-        main_place = None
-        if lat is not None and lon is not None:
-            nearby_places = get_nearby_places(lat, lon)
-            if nearby_places:
-                main_place = random.choice(nearby_places)
-                nearby_hint = (
-                    f"There is a {main_place['category']} nearby called '{main_place['name']}'. "
-                    "Suggest something relevant to that place."
-                )
-                print(f"[DEBUG] Nearby hint: {nearby_hint}")
-            else:
-                nearby_hint = "No major places nearby. Suggest something suitable for open areas."
-
-        # 🎲 Variation hint
-        daytime_variations = [
-            "Be energetic and playful.",
-            "Encourage interaction with others.",
-            "Make it involve a stranger.",
-            "Encourage them to take a photo, video or record audio.",
-            "Make it feel like a mini-game.",
-            "Include movement or interaction with the environment.",
-            "Encourage a quick creative act.",
-            "Make them explore a small detail around them they normally ignore.",
-            "Include something involving color or sound."
-        ]
-        nighttime_variations = [
-            "Be soft and gentle.",
-            "Encourage quiet reflection.",
-            "Focus on creativity or mindfulness.",
-            "Suggest a calming or self-reflective act.",
-            "Make it about observing surroundings quietly.",
-            "Encourage them to write or record a thought privately.",
-            "Let them notice city lights, sounds, or patterns quietly.",
-            "Prompt them to capture a subtle night detail in a photo or note."
-        ]
-
-        variation_hint = random.choice(
-            nighttime_variations if period in ["evening", "night", "pre-dawn"] else daytime_variations
-        )
-
-        # 🌀 Freshness randomizer — always defined
-        freshness_hint = random.choice([
-            "Make sure this challenge feels totally new compared to any previous idea.",
-            "Ensure this activity feels distinct in tone or action from the last few suggestions.",
-            "Add a small creative twist not seen in previous tasks.",
-            "Vary the setting or mood slightly to keep it interesting.",
-            "Change up the interaction style for variety."
-        ])
-
-        # 🧠 Final prompt
-        prompt = f"""
-        You are a warm, witty real-world assistant named Hoppi.
-        You talk like a playful friend who knows where the user is and what the world feels like right now.
-
-        The user’s current environment: {location_type}.
-        Their coordinates: {lat:.4f}, {lon:.4f}.
-        Current time (local): {datetime.now().strftime('%H:%M')}.
-        {weather_hint}
-        According to the sun cycle, it’s {period}.
-        {time_hint}
-        {safety_hint}
-
-        Nearby info: {nearby_hint}
-        Variation: {variation_hint}
-        Freshness: {freshness_hint}
-
-        Now, write ONE short, fun, real-time challenge that fits this situation.
-        ✨ Make it sound natural — like a friend suggesting something spontaneous.
-        💬 You can briefly mention the time of day like it's morning, afternoon or evening and weather to make it feel live.
-        🎯 Use vivid action verbs and sensory words (touch, sound, color, etc.).
-        ❌ Don’t use emojis, hashtags, or repeated openings like "Take a moment".
-        Don't mention the exact time directly.
-        ✅ Example tone:
-        - “Since it’s bright and breezy, find something that glows in sunlight and take a close-up photo.”
-        - “It’s quiet before sunrise — record the first sound you hear and describe how it feels.”
-        - “Rain’s coming down? Find a reflection and snap a photo of what’s upside down.”
-
-        Keep the response under 30 words.
-        Make it simple enough that a 12-year-old could understand.
-        It should sound spontaneous and doable without any tool right now.
-        Do NOT use poetic language or metaphors.
-        Assumpe the user is alone and has only phone in hand.
-
-        """
-
-
-        os.makedirs('results', exist_ok=True)
-        with open('results/prompts.txt', 'w') as f:
-            f.write(prompt + "\n")
-
-        print(f"[DEBUG] TOGETHER_API_KEY exists: {bool(os.getenv('TOGETHER_API_KEY'))}")
-        task = prompt_llm(prompt)
-        return task.strip(), main_place
-
-
-    except Exception as e:
-        import traceback
-        print("[ERROR] get_cached_task_for_location failed:")
-        print(traceback.format_exc())
-        print(f"[ERROR] Prompt generation failed: {e}")
-        return "⚠️ Task generation failed due to AI error.", None
-
-
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Location-based tasks with social and creative elements
-TASKS_BY_LOCATION = {
-    'park': [
-        "🌳 Hug a tree and ask a stranger or friend to take your photo!",
-        "🍃 Create a beautiful pattern using fallen leaves and photograph it.",
-        "🎵 Find a stranger and ask them to sing a simple beat with you (clap, snap, or hum).",
-        "📹 Record a 30-second video of you doing your best tree impression.",
-        "🌿 Collect 5 different types of leaves and arrange them artistically for a photo.",
-        "🎶 Find someone walking their dog and ask them to join you in a silly song about their pet.",
-        "📱 Take a video of you teaching a stranger how to identify 3 different trees.",
-        "🌺 Create a flower crown and ask someone to take a photo of you wearing it.",
-        "🎤 Record yourself singing a nature-themed song while walking through the park.",
-        "🤝 Find a stranger and ask them to help you build a tiny fairy house with natural materials."
-    ],
-    'restaurant': [
-        "🍽️ Order something you've never tried and ask a stranger to guess what it is!",
-        "🎵 Create a beat using your utensils and ask someone to join in.",
-        "📹 Record a video of you doing a dramatic food review for the camera.",
-        "🎤 Sing a song about the food you're eating and ask a stranger to rate it.",
-        "📱 Take a video of you teaching someone how to eat the most interesting dish on your table.",
-        "🤝 Find someone dining alone and ask them to join you for a fun food challenge.",
-        "🎶 Ask the waiter to help you create a silly song about the restaurant's specialty.",
-        "📸 Take a selfie with the chef and ask them to tell you their favorite cooking tip.",
-        "🎵 Use your phone to play a beat and ask a stranger to freestyle rap about their meal.",
-        "📹 Record a video of you doing a taste test blindfolded with a stranger's help."
-    ],
-    'street': [
-        "🎨 Find street art and ask a stranger to pose with it for a creative photo.",
-        "🎵 Start a beat by clapping and see how many people join in!",
-        "📹 Record a video of you doing your best street performer impression.",
-        "🎤 Sing a song about the street you're on and ask someone to add a verse.",
-        "📱 Take a video of you asking strangers to guess what's in a mystery bag.",
-        "🤝 Find someone waiting for a bus and ask them to help you create a sidewalk chalk drawing.",
-        "🎶 Ask a street musician to teach you a simple melody and record it.",
-        "📸 Take a selfie with a stranger and ask them to tell you their life story in one sentence.",
-        "🎵 Create a beat using sounds from the street (footsteps, car horns, etc.) and record it.",
-        "📹 Record a video of you doing a street dance and ask someone to join you."
-    ],
-    'beach': [
-        "🏖️ Build a sandcastle and ask a stranger to help you decorate it!",
-        "🎵 Create a rhythm using seashells and ask someone to join your beach band.",
-        "📹 Record a video of you doing your best mermaid impression in the sand.",
-        "🎤 Sing a beach-themed song and ask someone to harmonize with you.",
-        "📱 Take a video of you teaching a stranger how to find the perfect seashell.",
-        "🤝 Find someone building sand art and ask them to collaborate on a masterpiece.",
-        "🎶 Ask a stranger to help you write a song about the ocean and record it.",
-        "📸 Take a selfie with a stranger and ask them to share their favorite beach memory.",
-        "🎵 Use the waves as a beat and ask someone to freestyle rap about summer.",
-        "📹 Record a video of you doing a beach yoga pose and ask someone to join you."
-    ],
-    'mall': [
-        "🛍️ Find a stranger and ask them to help you pick the most outrageous outfit!",
-        "🎵 Create a beat using items from different stores and ask someone to join in.",
-        "📹 Record a video of you doing a fashion show walk and ask someone to judge it.",
-        "🎤 Sing a shopping-themed song and ask a stranger to add a verse about their favorite store.",
-        "📱 Take a video of you asking strangers to guess what's in your shopping bag.",
-        "🤝 Find someone at the food court and ask them to help you create a food art masterpiece.",
-        "🎶 Ask a store employee to teach you their store's jingle and record it.",
-        "📸 Take a selfie with a stranger and ask them to tell you their shopping secret.",
-        "🎵 Use the mall's ambient sounds to create a beat and ask someone to dance to it.",
-        "📹 Record a video of you doing a mall walk and ask someone to join your fitness challenge."
-    ]
-}
+# --- utils ---
+def now_stamp() -> str:
+    return datetime.utcnow().strftime("%Y%m%d-%H%M%S")
 
+def http_get(url: str, **kw):
+    kw.setdefault("timeout", 10)
+    headers = kw.pop("headers", {})
+    headers.setdefault("User-Agent", "hoppi-app")
+    return requests.get(url, headers=headers, **kw)
+
+def get_day_period(lat, lon):
+    try:
+        url = f"https://api.sunrise-sunset.org/json?lat={lat}&lng={lon}&formatted=0"
+        res = http_get(url)
+        res.raise_for_status()
+        data = res.json()["results"]
+        sunrise = datetime.fromisoformat(data["sunrise"]).replace(tzinfo=timezone.utc)
+        sunset  = datetime.fromisoformat(data["sunset"]).replace(tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+
+        morning_end   = sunrise + timedelta(hours=4)
+        afternoon_end = sunset  - timedelta(hours=2)
+
+        if now < sunrise: return "pre-dawn"
+        if sunrise <= now < morning_end: return "morning"
+        if morning_end <= now < afternoon_end: return "afternoon"
+        if afternoon_end <= now < sunset: return "evening"
+        return "night"
+    except Exception as e:
+        print(f"[ERROR] Sunrise-Sunset API failed: {e}")
+        hour = datetime.now().hour
+        if hour < 12: return "morning"
+        if hour < 18: return "afternoon"
+        return "night"
 
 def get_weather_hint(lat, lon):
     try:
         url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
-        res = requests.get(url)
+        res = http_get(url)
+        res.raise_for_status()
         data = res.json()
         weather_code = data["current_weather"]["weathercode"]
-
-        # See: https://open-meteo.com/en/docs for full code meanings
-        weather_conditions = {
-            0: "clear sky",
-            1: "mainly clear",
-            2: "partly cloudy",
-            3: "overcast",
-            45: "fog",
-            48: "depositing rime fog",
-            51: "light drizzle",
-            61: "light rain",
-            71: "light snow",
-            80: "rain showers",
-        }
-
-        description = weather_conditions.get(weather_code, "unknown conditions")
-
-        if weather_code in [0, 1]:
-            return "It's sunny, suggest something social and outdoors."
-        elif weather_code in [2, 3, 45]:
-            return "It's cloudy, suggest something cozy or introspective."
-        elif weather_code in [51, 61, 80]:
-            return "It's rainy, suggest something under shelter or with rain gear."
-        elif weather_code in [71]:
-            return "It's snowy, suggest something fun with snow."
-        else:
-            return f"The weather is {description}, suggest something suitable."
+        if weather_code in (0,1): return "It's sunny, suggest something social and outdoors."
+        if weather_code in (2,3,45): return "It's cloudy, suggest something cozy or introspective."
+        if weather_code in (51,61,80): return "It's rainy, suggest something under shelter or with rain gear."
+        if weather_code in (71,): return "It's snowy, suggest something fun with snow."
+        return "Weather unclear; suggest something adaptable."
     except Exception as e:
         print(f"[Weather Error] {e}")
         return ""
 
 def get_nearby_places(lat, lon, radius=500):
-    import requests
-
-    # Overpass API endpoint
     url = "https://overpass-api.de/api/interpreter"
-
-    # Expanded Overpass query for richer context
     query = f"""
-    [out:json];
+    [out:json][timeout:25];
     (
       node["leisure"="park"](around:{radius},{lat},{lon});
       node["leisure"="playground"](around:{radius},{lat},{lon});
@@ -331,79 +95,73 @@ def get_nearby_places(lat, lon, radius=500):
     );
     out center;
     """
-
     try:
-        res = requests.get(url, params={'data': query}, headers={'User-Agent': 'hoppi-app'})
+        res = http_get(url, params={'data': query})
+        res.raise_for_status()
         data = res.json()
-        if 'elements' not in data:
-            return []
-
-        nearby = []
-        for el in data['elements']:
+        elements = data.get('elements', [])
+        out = []
+        for el in elements:
             tags = el.get('tags', {})
             name = tags.get('name', 'Unknown place')
             category = tags.get('amenity') or tags.get('shop') or tags.get('leisure') or tags.get('tourism') or 'unknown'
-            lat_el = el.get('lat')
-            lon_el = el.get('lon')
-            nearby.append({'name': name, 'category': category, 'lat': lat_el, 'lon': lon_el})
-
-
-        print(f"[DEBUG] Nearby places: {nearby}")
-        return nearby
-
+            out.append({'name': name, 'category': category, 'lat': el.get('lat'), 'lon': el.get('lon')})
+        return out
     except Exception as e:
         print(f"[ERROR] Nearby place detection failed: {e}")
         return []
 
-
-                # 🗺️ Nearby place detection
-        nearby_hint = ""
-        if lat is not None and lon is not None:
-            nearby_places = get_nearby_places(lat, lon)
-            if nearby_places:
-                main_place = random.choice(nearby_places)
-                nearby_hint = (
-                    f"There is a {main_place['category']} nearby called '{main_place['name']}'. "
-                    "Suggest something relevant to that place."
-                )
-                print(f"[DEBUG] Nearby hint: {nearby_hint}")
-            else:
-                nearby_hint = "No major places nearby. Suggest something suitable for open areas."
-
-
 def get_location_type(lat, lon):
-    import requests
-
     try:
         url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json&zoom=18&addressdetails=1"
-        res = requests.get(url, headers={"User-Agent": "hoppi-app"})
-        print(f"[DEBUG] Calling Nominatim: {url}")
-        res = requests.get(url, headers={"User-Agent": "hoppi-app"}, timeout=10)
+        res = http_get(url)
         print(f"[DEBUG] Nominatim status {res.status_code}")
         data = res.json()
-        print(f"[DEBUG] Nominatim response keys: {list(data.keys())}")
-        data = res.json()
         tags = data.get("address", {})
-        
-        if 'beach' in str(tags).lower() or 'coast' in str(tags).lower():
-            return 'beach'
-        elif 'park' in tags.get('leisure', '') or 'park' in str(tags).lower():
-            return 'park'
-        elif 'restaurant' in str(tags).lower() or 'cafe' in str(tags).lower():
-            return 'restaurant'
-        elif 'mall' in str(tags).lower() or 'shopping' in str(tags).lower():
-            return 'mall'
-        elif 'forest' in str(tags).lower():
-            return 'park'
-        elif 'road' in tags or 'suburb' in tags or 'city' in tags:
-            return 'street'
-        else:
-            return 'street'
+        blob = json.dumps(tags).lower()
+        if 'beach' in blob or 'coast' in blob: return 'beach'
+        if 'park' in blob or tags.get('leisure','') == 'park': return 'park'
+        if 'restaurant' in blob or 'cafe' in blob: return 'restaurant'
+        if 'mall' in blob or 'shopping' in blob: return 'mall'
+        if 'forest' in blob: return 'park'
+        if any(k in tags for k in ('road','suburb','city','neighbourhood')): return 'street'
+        return 'street'
     except Exception as e:
-        print(f"Location type detection failed: {e}")
+        print(f"[ERROR] Location type detection failed: {e}")
         return 'street'
 
+def ensure_session_dir(session_id: str) -> Path:
+    d = Path(app.config['UPLOAD_FOLDER']) / session_id
+    d.mkdir(parents=True, exist_ok=True)
+    return d
 
+def next_index(session_dir: Path) -> int:
+    dirs = [p for p in session_dir.iterdir() if p.is_dir() and p.name.isdigit()]
+    return (max(int(p.name) for p in dirs)+1) if dirs else 1
+
+def judge_submission(task: str, media_type: str, text: str | None, file_path: str | None, lat: float | None, lon: float | None) -> str:
+    sample = f"User wrote: {text[:160]}" if (text and text.strip()) else (f"User submitted a {media_type}." if file_path else "No preview.")
+    prompt = f"""
+You are Hoppi, a playful, witty judge for real-world mini-challenges.
+Task: {task}
+Submission type: {media_type}
+{sample}
+Location: {lat}, {lon}
+
+Rules:
+- One short verdict (<= 35 words).
+- Encouraging, specific, a little cheeky, never mean.
+- Assume success if ambiguous.
+- End with a nudge to do another task (no emojis/hashtags/bullets).
+- No quotes or meta.
+"""
+    try:
+        return prompt_llm(prompt).strip()
+    except Exception as e:
+        print("[LLM ERROR]", e)
+        return "Nice! That totally counts. Ready for another quick challenge?"
+
+# --- routes ---
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -411,70 +169,143 @@ def index():
 @app.route('/generate-task', methods=['POST'])
 def generate_task():
     try:
-        data = request.get_json()
-        lat = data.get('latitude')
-        lon = data.get('longitude')
-        print(f"[DEBUG] Received lat={lat}, lon={lon}")
-
-        if not lat or not lon:
+        data = request.get_json(force=True)
+        lat = data.get('latitude'); lon = data.get('longitude')
+        if lat is None or lon is None:
             return jsonify({'error': 'Location data required'}), 400
-
         location_type = get_location_type(lat, lon)
-        print(f"[DEBUG] location_type={location_type}")
+        weather_hint = get_weather_hint(lat, lon)
+        nearby_places = get_nearby_places(lat, lon)
+        main_place = random.choice(nearby_places) if nearby_places else None
 
-        task, selected_place = get_cached_task_for_location(location_type, lat, lon)
-        print(f"[DEBUG] task={task}")
+        period = get_day_period(lat, lon)
+        time_hint_map = {
+            "pre-dawn":"It's before sunrise — suggest something peaceful or introspective.",
+            "morning":"It's morning, suggest something energizing and fresh.",
+            "afternoon":"It's afternoon, suggest something social or creative.",
+            "evening":"It's evening, suggest something calm and reflective.",
+            "night":"It's night, suggest something quiet, safe, and introspective."
+        }
+        safety_hint = "It's dark, so avoid unsafe areas or strangers. Focus on calm, personal tasks." if period in ("evening","night","pre-dawn") else "It's bright outside, so social or playful tasks are great."
+        nearby_hint = f"There is a {main_place['category']} nearby called '{main_place['name']}'. Suggest something relevant to that place." if main_place else "No major places nearby. Suggest something suitable for open areas."
+        daytime = [
+            "Be energetic and playful.","Encourage interaction with others.","Make it involve a stranger.",
+            "Encourage them to take a photo, video or record audio.","Make it feel like a mini-game.",
+            "Include movement or interaction with the environment.","Encourage a quick creative act.",
+            "Make them explore a small detail around them they normally ignore.","Include something involving color or sound."
+        ]
+        nighttime = [
+            "Be soft and gentle.","Encourage quiet reflection.","Focus on creativity or mindfulness.",
+            "Suggest a calming or self-reflective act.","Make it about observing surroundings quietly.",
+            "Encourage them to write or record a thought privately.","Let them notice city lights, sounds, or patterns quietly.",
+            "Prompt them to capture a subtle night detail in a photo or note."
+        ]
+        variation_hint = random.choice(nighttime if period in ("evening","night","pre-dawn") else daytime)
+        freshness_hint = random.choice([
+            "Make sure this challenge feels totally new compared to any previous idea.",
+            "Ensure this activity feels distinct in tone or action from the last few suggestions.",
+            "Add a small creative twist not seen in previous tasks.",
+            "Vary the setting or mood slightly to keep it interesting.",
+            "Change up the interaction style for variety."
+        ])
 
+        prompt = f"""
+You are a warm, witty real-world assistant named Hoppi.
+
+The user’s environment: {location_type}.
+Coordinates: {lat:.4f}, {lon:.4f}.
+Local time (approx hour): {datetime.now().strftime('%H')}:00.
+{weather_hint}
+According to the sun cycle, it’s {period}.
+{time_hint_map[period]}
+{safety_hint}
+
+Nearby info: {nearby_hint}
+Variation: {variation_hint}
+Freshness: {freshness_hint}
+
+Write ONE short, fun, real-time challenge under 30 words.
+No emojis/hashtags. Avoid repetitive openings. No exact clock time. Simple, 12-year-old-friendly, spontaneous, doable now with just a phone.
+"""
+        os.makedirs('results', exist_ok=True)
+        with open('results/prompts.txt', 'w', encoding='utf-8') as f:
+            f.write(prompt + "\n")
+
+        task = prompt_llm(prompt).strip()
         return jsonify({
             'task': task,
             'location_type': location_type,
             'coordinates': {'lat': lat, 'lon': lon},
             'source': "LLM",
-            'selected_place': selected_place
+            'selected_place': main_place
         })
-
     except Exception as e:
-        print("[ERROR] Exception in generate-task:")
-        print(traceback.format_exc())
+        print("[ERROR] Exception in generate-task:", traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
-
-
-@app.route('/upload', methods=['POST'])
-def upload_image():
+@app.route("/submit", methods=["POST"])
+def submit():
     try:
-        if 'image' not in request.files:
-            return jsonify({'error': 'No image file provided'}), 400
-        
-        file = request.files['image']
-        if file.filename == '':
-            return jsonify({'error': 'No file selected'}), 400
-        
-        if file:
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-            
-            return jsonify({
-                'message': 'Image uploaded successfully',
-                'filename': filename,
-                'filepath': filepath
-            })
-    
+        session_id = request.form.get("session_id") or str(uuid.uuid4())
+        task = (request.form.get("task") or "").strip()
+        media_type = (request.form.get("media_type") or "").strip()
+        lat = request.form.get("lat", type=float)
+        lon = request.form.get("lon", type=float)
+        text = request.form.get("text")
+
+        if not task or not media_type:
+            return jsonify({"error":"Missing task or media_type"}), 400
+
+        sdir = ensure_session_dir(session_id)
+        idx = next_index(sdir)
+        entry = sdir / f"{idx:03d}"
+        entry.mkdir(parents=True, exist_ok=True)
+
+        file_path = None
+        if "file" in request.files and request.files["file"].filename:
+            f = request.files["file"]
+            fname = secure_filename(f.filename) or f"{media_type}-{now_stamp()}"
+            file_path = str(entry / fname)
+            f.save(file_path)
+
+        if text and text.strip():
+            (entry / "note.txt").write_text(text.strip(), encoding="utf-8")
+
+        meta = {
+            "session_id": session_id, "index": idx, "task": task, "media_type": media_type,
+            "file": file_path, "text": (text or ""), "lat": lat, "lon": lon,
+            "created_utc": datetime.utcnow().isoformat() + "Z",
+        }
+        (entry / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
+        total = len([p for p in sdir.iterdir() if p.is_dir() and p.name.isdigit()])
+        remaining = max(0, 5 - total)
+        surprise_ready = total >= 5
+
+        judge_text = judge_submission(task, media_type, text, file_path, lat, lon)
+
+        return jsonify({"ok": True, "session_id": session_id, "count": total, "remaining": remaining, "surprise_ready": surprise_ready, "judge_text": judge_text})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print("[ERROR] /submit failed", traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/progress/<session_id>", methods=["GET"])
+def progress(session_id: str):
+    try:
+        sdir = ensure_session_dir(session_id)
+        total = len([p for p in sdir.iterdir() if p.is_dir() and p.name.isdigit()])
+        return jsonify({"count": total, "remaining": max(0, 5 - total), "surprise_ready": total >= 5})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/download/<filename>')
 def download_file(filename):
     try:
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        if os.path.exists(filepath):
-            return send_file(filepath, as_attachment=True)
-        else:
-            return jsonify({'error': 'File not found'}), 404
+        path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if os.path.exists(path): return send_file(path, as_attachment=True)
+        return jsonify({'error':'File not found'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True)
-
