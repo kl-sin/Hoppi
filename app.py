@@ -1,15 +1,30 @@
-# server.py (Flask)
+# /app/app.py
+# Flask server (HF Spaces-safe: writes to /tmp by default)
 from flask import Flask, render_template, request, jsonify, send_file
 import os, json, uuid, random, traceback, requests
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from werkzeug.utils import secure_filename
-from llm import prompt_llm
+
+# --- LLM client (safe fallback if llm.py absent) ---
+try:
+    from llm import prompt_llm
+except Exception:
+    def prompt_llm(prompt: str) -> str:  # minimal fallback; only used if llm.py missing
+        return "Nice! That totally counts. Ready for another quick challenge?"
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'uploads'
+
+# --- Writable paths (HF Spaces tip: /tmp is writable) ---
+app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER', '/tmp/uploads')
+RESULTS_DIR = os.getenv('RESULTS_DIR', '/tmp/results')
+
+# 64 MB max upload
 app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024
+
+# Ensure writable dirs exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(RESULTS_DIR, exist_ok=True)
 
 # --- utils ---
 def now_stamp() -> str:
@@ -227,8 +242,9 @@ Freshness: {freshness_hint}
 Write ONE short, fun, real-time challenge under 30 words.
 No emojis/hashtags. Avoid repetitive openings. No exact clock time. Simple, 12-year-old-friendly, spontaneous, doable now with just a phone.
 """
-        os.makedirs('results', exist_ok=True)
-        with open('results/prompts.txt', 'w', encoding='utf-8') as f:
+        # Write last prompt for debugging/QA (in writable place)
+        os.makedirs(RESULTS_DIR, exist_ok=True)
+        with open(os.path.join(RESULTS_DIR, 'prompts.txt'), 'w', encoding='utf-8') as f:
             f.write(prompt + "\n")
 
         task = prompt_llm(prompt).strip()
@@ -298,14 +314,16 @@ def progress(session_id: str):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/download/<filename>')
+@app.route('/download/<path:filename>')
 def download_file(filename):
     try:
         path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        if os.path.exists(path): return send_file(path, as_attachment=True)
+        if os.path.exists(path):
+            return send_file(path, as_attachment=True)
         return jsonify({'error':'File not found'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    # On local runs you can override PORT; HF sets PORT automatically.
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "8000")), debug=True)
