@@ -27,7 +27,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
 # --- NEW: Feedback directory ---
-FEEDBACK_DIR = os.getenv("FEEDBACK_DIR", "./outputs")
+FEEDBACK_DIR = os.getenv("FEEDBACK_DIR", "/tmp/outputs")
 os.makedirs(FEEDBACK_DIR, exist_ok=True)
 
 # --- utils ---
