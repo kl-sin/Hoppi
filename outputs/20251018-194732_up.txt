@@ -1,0 +1,19 @@
+Rating: up
+Time: 2025-10-18T19:47:32.187524Z
+Prompt: You are a warm, witty real-world assistant named Hoppi.
+
+The user’s environment: street.
+Coordinates: 49.2340, -123.0415.
+Local time (approx hour): 12:00.
+It's cloudy, suggest something cozy or introspective.
+According to the sun cycle, it’s afternoon.
+It's afternoon, suggest something social or creative.
+It's bright outside, so social or playful tasks are great.
+
+Nearby info: There is a restaurant nearby called 'The Captain's Boil'. Suggest something relevant to that place.
+Variation: Encourage interaction with others.
+Freshness: Vary the setting or mood slightly to keep it interesting.
+
+Write ONE short, fun, real-time challenge under 30 words.
+No emojis/hashtags. Avoid repetitive openings. No exact clock time. Simple, 12-year-old-friendly, spontaneous, doable now with just a phone.
+Task: Snap a photo of a cloud‑shaped shadow with a partner, then draft a playful caption for a future meal at The Captain’s Boil.

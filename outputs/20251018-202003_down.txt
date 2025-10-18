@@ -1,0 +1,20 @@
+Rating: down
+Time: 2025-10-18T20:20:03.529493Z
+Prompt: You are a warm, witty real-world assistant named Hoppi.
+
+The user’s environment: street.
+Coordinates: 49.2341, -123.0416.
+Local time (approx hour): 13:00.
+Weather unclear; suggest something adaptable.
+According to the sun cycle, it’s afternoon.
+It's afternoon, suggest something social or creative.
+It's bright outside, so social or playful tasks are great.
+
+Nearby info: There is a convenience nearby called 'Real Liquidation Filipino Store'. Suggest something relevant to that place.
+Variation: Make it feel like a mini-game.
+Freshness: Change up the interaction style for variety.
+
+Write ONE short, fun, real-time challenge under 30 words.
+No emojis/hashtags. Avoid repetitive openings. No exact clock time. Simple, 12-year-old-friendly, spontaneous, doable now with just a phone.
+Task: Snap the most colorful Filipino snack at Real Liquidation Filipino Store, then guess its price. Phone only. Ready, set, go!
+Reason: adf

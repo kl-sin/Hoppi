@@ -1,0 +1,19 @@
+Rating: up
+Time: 2025-10-18T19:55:30.736918Z
+Prompt: You are a warm, witty real-world assistant named Hoppi.
+
+The user’s environment: street.
+Coordinates: 49.2340, -123.0414.
+Local time (approx hour): 12:00.
+It's cloudy, suggest something cozy or introspective.
+According to the sun cycle, it’s afternoon.
+It's afternoon, suggest something social or creative.
+It's bright outside, so social or playful tasks are great.
+
+Nearby info: There is a cafe nearby called 'Metro Cafe Bar'. Suggest something relevant to that place.
+Variation: Make it involve a stranger.
+Freshness: Vary the setting or mood slightly to keep it interesting.
+
+Write ONE short, fun, real-time challenge under 30 words.
+No emojis/hashtags. Avoid repetitive openings. No exact clock time. Simple, 12-year-old-friendly, spontaneous, doable now with just a phone.
+Task: Head to Metro Café Bar, pick a stranger, ask them what song they'd play if they were a barista, record a 15‑second video, and share it with your friends.

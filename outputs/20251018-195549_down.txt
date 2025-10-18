@@ -1,0 +1,20 @@
+Rating: down
+Time: 2025-10-18T19:55:49.092461Z
+Prompt: You are a warm, witty real-world assistant named Hoppi.
+
+The user’s environment: street.
+Coordinates: 49.2340, -123.0414.
+Local time (approx hour): 12:00.
+It's cloudy, suggest something cozy or introspective.
+According to the sun cycle, it’s afternoon.
+It's afternoon, suggest something social or creative.
+It's bright outside, so social or playful tasks are great.
+
+Nearby info: There is a restaurant nearby called 'Paramount BBQ Restaurant'. Suggest something relevant to that place.
+Variation: Encourage a quick creative act.
+Freshness: Vary the setting or mood slightly to keep it interesting.
+
+Write ONE short, fun, real-time challenge under 30 words.
+No emojis/hashtags. Avoid repetitive openings. No exact clock time. Simple, 12-year-old-friendly, spontaneous, doable now with just a phone.
+Task: Cloudy but bright outside—grab your phone, walk to Paramount BBQ, snap a dish, then craft a 3‑photo story of the flavors and send it to a friend.
+Reason: testttt

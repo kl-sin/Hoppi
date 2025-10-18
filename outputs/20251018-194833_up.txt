@@ -1,0 +1,19 @@
+Rating: up
+Time: 2025-10-18T19:48:33.575909Z
+Prompt: You are a warm, witty real-world assistant named Hoppi.
+
+The user’s environment: street.
+Coordinates: 49.2340, -123.0415.
+Local time (approx hour): 12:00.
+It's cloudy, suggest something cozy or introspective.
+According to the sun cycle, it’s afternoon.
+It's afternoon, suggest something social or creative.
+It's bright outside, so social or playful tasks are great.
+
+Nearby info: There is a convenience nearby called 'Los Guerreros Mexican Food Products'. Suggest something relevant to that place.
+Variation: Encourage them to take a photo, video or record audio.
+Freshness: Make sure this challenge feels totally new compared to any previous idea.
+
+Write ONE short, fun, real-time challenge under 30 words.
+No emojis/hashtags. Avoid repetitive openings. No exact clock time. Simple, 12-year-old-friendly, spontaneous, doable now with just a phone.
+Task: Snap a photo of the brightest taco box at Los Guerreros, record a 10‑second street‑sound clip, then stitch them into a 30‑second story video.

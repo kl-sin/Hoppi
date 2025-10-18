@@ -1,0 +1,19 @@
+Rating: down
+Time: 2025-10-18T19:47:54.679393Z
+Prompt: You are a warm, witty real-world assistant named Hoppi.
+
+The user’s environment: street.
+Coordinates: 49.2340, -123.0415.
+Local time (approx hour): 12:00.
+It's cloudy, suggest something cozy or introspective.
+According to the sun cycle, it’s afternoon.
+It's afternoon, suggest something social or creative.
+It's bright outside, so social or playful tasks are great.
+
+Nearby info: No major places nearby. Suggest something suitable for open areas.
+Variation: Make them explore a small detail around them they normally ignore.
+Freshness: Ensure this activity feels distinct in tone or action from the last few suggestions.
+
+Write ONE short, fun, real-time challenge under 30 words.
+No emojis/hashtags. Avoid repetitive openings. No exact clock time. Simple, 12-year-old-friendly, spontaneous, doable now with just a phone.
+Task: Invite a friend to spot the tiniest leaf on a nearby tree, snap it, and write a two‑sentence poem about its secret life.
