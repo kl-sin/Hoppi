@@ -26,6 +26,10 @@ app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
+# --- NEW: Feedback directory ---
+FEEDBACK_DIR = os.getenv("FEEDBACK_DIR", "./outputs")
+os.makedirs(FEEDBACK_DIR, exist_ok=True)
+
 # --- utils ---
 def now_stamp() -> str:
     return datetime.utcnow().strftime("%Y%m%d-%H%M%S")
@@ -255,13 +259,15 @@ No emojis/hashtags. Avoid repetitive openings. No exact clock time. Simple, 12-y
             task = "Nice! That totally counts. Ready for another quick challenge."
 
         # --- Continue as normal ---
-        return jsonify({
+        response = {
             'task': task,
             'location_type': location_type,
             'coordinates': {'lat': lat, 'lon': lon},
             'source': "LLM",
-            'selected_place': main_place
-        })
+            'selected_place': main_place,
+            'prompt': prompt.strip()  # 👈 add prompt to allow user feedback
+        }
+        return jsonify(response)
     except Exception as e:
         print("[ERROR] Exception in generate-task:", traceback.format_exc())
         return jsonify({'error': str(e)}), 500
@@ -310,6 +316,41 @@ def submit():
         return jsonify({"ok": True, "session_id": session_id, "count": total, "remaining": remaining, "surprise_ready": surprise_ready, "judge_text": judge_text})
     except Exception as e:
         print("[ERROR] /submit failed", traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/feedback", methods=["POST"])
+def feedback():
+    try:
+        data = request.get_json(force=True)
+        rating = data.get("rating")  # 'up' or 'down'
+        input_text = data.get("input")
+        output_text = data.get("output")
+        reason = data.get("reason")  # only for thumbs down
+
+        if rating not in ("up", "down") or not input_text or not output_text:
+            return jsonify({"error": "Missing required fields"}), 400
+
+        entry = {
+            "input": input_text,
+            "output": output_text,
+            "rating": rating,
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+        if rating == "down" and reason:
+            entry["reason"] = reason.strip()
+
+        fname = f"{now_stamp()}_{rating}.txt"
+        with open(os.path.join(FEEDBACK_DIR, fname), "w", encoding="utf-8") as f:
+            f.write(f"Rating: {rating}\n")
+            f.write(f"Time: {entry['timestamp']}\n")
+            f.write(f"Prompt: {entry['input']}\n")
+            f.write(f"Task: {entry['output']}\n")
+            if entry.get("reason"):
+                f.write(f"Reason: {entry['reason']}\n")
+
+        return jsonify({"ok": True})
+    except Exception as e:
+        print("[ERROR] /feedback failed", traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 @app.route("/progress/<session_id>", methods=["GET"])

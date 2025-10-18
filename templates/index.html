@@ -1,4 +1,4 @@
-<!-- /templates/index.html  (drop-in full file with requested changes) -->
+<!-- /templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -41,13 +41,7 @@
     button.locked{opacity:.5;pointer-events:auto;cursor:not-allowed}
     button.locked:hover{opacity:.7}
     .hidden{display:none!important}
-    .controls{
-        display:flex;
-        justify-content:center;  /* center horizontally */
-        align-items:center;
-        gap:10px;
-        flex-wrap:wrap;
-    }
+    .controls{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap}
   </style>
 </head>
 <body>
@@ -61,7 +55,6 @@
       <div id="mapContainer" style="display:none">
         <p id="locationDescription" style="font-weight:bold;margin-bottom:10px;color:#333"></p>
         <div id="map" style="width:100%;height:300px;border-radius:10px;margin:10px 0"></div>
-        <!-- distanceInfo removed by request -->
       </div>
       <button class="btn" id="getLocationBtn" style="margin-top:10px">📍 Get My Location</button>
       <div class="status" id="status"></div>
@@ -74,12 +67,20 @@
     <div class="task-container" id="taskContainer">
       <h3>🎉 Let’s See What the Universe Has for You!</h3>
       <div class="task-text" id="taskText"></div>
+      <div class="controls" id="feedbackButtons" style="display:none; justify-content:center;">
+        <button class="btn btn-secondary" id="thumbUpBtn">👍</button>
+        <button class="btn btn-secondary" id="thumbDownBtn">👎</button>
+      </div>
+      <div id="thumbDownReason" style="display:none; margin-top:10px;">
+        <textarea id="feedbackReason" placeholder="What didn’t work?" rows="3" style="width:100%;border-radius:8px;padding:10px;border:1px solid #ccc"></textarea>
+        <button class="btn btn-secondary" id="submitFeedbackBtn" style="margin-top:8px;">Submit Feedback</button>
+      </div>
       <div class="loading" id="loading">
         <div class="spinner"></div>
         <p style="color:#667eea;font-weight:bold">Generating your adventure task...</p>
       </div>
       <button class="btn" id="newTaskBtn">Get New Task</button>
-      <div id="taskStatus" class="status" style="display:none"></div>
+      <div id="feedbackStatus" class="status" style="display:none; margin-bottom: 10px;"></div>
     </div>
 
     <div class="upload-section" id="uploadSection">
@@ -97,31 +98,30 @@
       <div id="photoCaptureSection" style="display:block;text-align:center;margin:20px 0">
         <video id="photoPreview" autoplay playsinline muted width="100%" height="300" style="border-radius:10px;display:none;object-fit:cover"></video>
         <canvas id="photoCanvas" width="640" height="480" style="display:none;border-radius:10px;margin-top:10px;max-width:100%;max-height:300px;object-fit:cover"></canvas>
-        <!-- Photo controls -->
-            <div class="controls" style="margin-bottom: 15px;">
-            <button class="btn" id="startPhotoBtn">📷 Start Photo</button>
-            <button class="btn btn-secondary" id="capturePhotoBtn" style="display:none">📸 Capture</button>
-            <button class="btn btn-secondary" id="closePhotoBtn" style="display:none">⏹️ Stop</button>
-            </div>
+        <div class="controls" style="margin-bottom: 15px;">
+          <button class="btn" id="startPhotoBtn">📷 Start Photo</button>
+          <button class="btn btn-secondary" id="capturePhotoBtn" style="display:none">📸 Capture</button>
+          <button class="btn btn-secondary" id="closePhotoBtn" style="display:none">⏹️ Stop</button>
         </div>
+      </div>
 
       <input type="file" id="mediaInput" style="display:none">
 
       <div id="videoSection" style="display:none;text-align:center;margin:20px 0">
         <div class="controls" style="margin-bottom:15px;">
-            <button class="btn" id="startVideoBtn">🎬 Start Recording</button>
-            <button class="btn btn-secondary" id="stopVideoBtn" style="display:none">⏹️ Stop Recording</button>
+          <button class="btn" id="startVideoBtn">🎬 Start Recording</button>
+          <button class="btn btn-secondary" id="stopVideoBtn" style="display:none">⏹️ Stop Recording</button>
         </div>
         <video id="videoPreview" width="100%" height="300" autoplay playsinline muted style="border-radius:10px;display:none"></video>
-        </div>
+      </div>
 
       <div id="audioSection" style="display:none">
         <div class="controls" style="text-align:center;margin:20px 0;">
-            <button class="btn" id="startAudioBtn">🎤 Start Recording</button>
-            <button class="btn btn-secondary" id="stopAudioBtn" style="display:none">⏹️ Stop Recording</button>
+          <button class="btn" id="startAudioBtn">🎤 Start Recording</button>
+          <button class="btn btn-secondary" id="stopAudioBtn" style="display:none">⏹️ Stop Recording</button>
         </div>
         <audio id="audioPreview" controls style="width:100%;margin:10px 0;display:none"></audio>
-        </div>
+      </div>
 
       <div id="textSection" style="display:none;text-align:center;margin:20px 0">
         <textarea id="textInput" placeholder="Write your thoughts here (max 300 characters)..." rows="6" style="width:100%;border-radius:10px;padding:10px;border:1px solid #ccc"></textarea>
@@ -129,6 +129,15 @@
       </div>
 
       <div id="mediaPreview"></div>
+      <div id="mediaError" class="inline-alert error" style="display:none"></div>
+
+      <!-- NEW: submit loader & answer directly under preview -->
+      <div id="submitLoading" class="loading" style="display:none">
+        <div class="spinner"></div>
+        <p style="color:#667eea;font-weight:bold">🧠 Letting Hoppi judge your masterpiece...</p>
+      </div>
+      <div id="submitAnswer" class="status" style="display:none"></div>
+
       <div id="actionButtons" style="display:none">
         <button class="btn btn-secondary" id="deleteBtn">🗑 Delete</button>
         <button class="btn" id="submitBtn">📤 Submit</button>
@@ -143,11 +152,33 @@
     let mediaRecorder=null,recordedChunks=[],videoStream=null,audioStream=null,photoStream=null;
     let map=null,locationMarker=null,suppressOnStop=false,countdownInterval=null,videoTimer=null,audioTimer=null;
     let countdownSeconds=30,textDraft=''; let taskAborter=null;
-    let taskMarker=null; // distance line removed
+    let taskMarker=null;
 
     // UI helpers
     const $ = id => document.getElementById(id);
     const show = (el,flag) => el.style.display = flag ? 'block' : 'none';
+
+    // Media error helpers (errors only)
+    function showMediaError(msg){
+      const el=$('mediaError');
+      el.textContent = msg;
+      el.style.display = 'block';
+      console.error('[MEDIA]', msg);
+    }
+    function clearMediaError(){
+      const el=$('mediaError');
+      el.textContent = '';
+      el.style.display = 'none';
+    }
+
+    // Subtle success cue
+    function flashPreview(elId){
+      const el = $(elId);
+      if(!el) return;
+      const prevOutline = el.style.outline;
+      el.style.outline = '3px solid #d1e7dd';
+      setTimeout(()=>{ el.style.outline = prevOutline || ''; }, 600);
+    }
 
     function startCountdown(duration=30){
       const t=$('countdownTimer'); countdownSeconds=duration; t.textContent=`⏳ ${countdownSeconds}s left`; show(t,true);
@@ -170,6 +201,10 @@
       if(isSwitching){ $('mediaPreview').innerHTML=''; show($('actionButtons'),false); uploadedMedia=null; }
       stopCountdown();
       clearTimeout(videoTimer); clearTimeout(audioTimer);
+      clearMediaError();
+      // clear submit area when switching types
+      show($('submitLoading'),false);
+      const ans=$('submitAnswer'); ans.textContent=''; ans.className='status'; show(ans,false);
     }
 
     const blueIcon = new L.Icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
@@ -195,7 +230,6 @@
       const mapContainer=$('mapContainer'); mapContainer.style.display='block';
       if(map) map.remove();
 
-      // create map first
       map=L.map('map').setView([currentLocation.latitude,currentLocation.longitude],15);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(map);
       locationMarker=L.marker([currentLocation.latitude,currentLocation.longitude],{icon:blueIcon}).addTo(map);
@@ -205,7 +239,6 @@
         if(!map) return;
         map.invalidateSize();
         map.panTo([currentLocation.latitude,currentLocation.longitude]);
-        // re-render existing task target
         if (currentTask && currentTask.selected_place &&
             currentTask.selected_place.lat != null && currentTask.selected_place.lon != null) {
           renderTaskTarget(currentTask.selected_place);
@@ -223,15 +256,14 @@
           const a=data.address;
           const road=a.road||a.pedestrian||a.path||null;
           const neighborhood=a.neighbourhood||a.suburb||a.city||a.town||a.village||null;
-          const type = (()=>{
-            const fields=[a.amenity,a.leisure,a.shop,a.tourism,a.highway,a.office,a.building,a.natural,a.landuse].filter(Boolean).map(v=>v.toLowerCase());
-            const has=k=>fields.includes(k);
-            if(['park','garden','playground','trail','forest','woodland'].some(has)) return 'park';
-            if(['museum','gallery','exhibition'].some(has)) return 'museum';
-            if(['restaurant','cafe','bar'].some(has)) return 'restaurant';
-            if(['mall','shopping','market','retail','store','shop'].some(has)) return 'mall';
-            return null;
-          })();
+          const fields=[a.amenity,a.leisure,a.shop,a.tourism,a.highway,a.office,a.building,a.natural,a.landuse].filter(Boolean).map(v=>v.toLowerCase());
+          const has=k=>fields.includes(k);
+          let type=null;
+          if(['park','garden','playground','trail','forest','woodland'].some(has)) type='park';
+          else if(['museum','gallery','exhibition'].some(has)) type='museum';
+          else if(['restaurant','cafe','bar'].some(has)) type='restaurant';
+          else if(['mall','shopping','market','retail','store','shop'].some(has)) type='mall';
+
           if(type){ description=`Hey, you are in a ${type}. What are you up to?`; popup=`📍 You are in a ${type}`; }
           else if(road){ description=`Hey, you are on ${road}. What are you up to?`; popup=`📍 You are on ${road}`; }
           else if(neighborhood){ description=`Hey, you are near ${neighborhood}. What are you up to?`; popup=`📍 You are near ${neighborhood}`; }
@@ -244,7 +276,10 @@
       }
     }
 
-    // 🔸 emoji label for task place
+    // Helpers for task target
+    function escapeHtml(s=''){
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+    }
     function getCategoryEmoji(cat){
       const c=(cat||'').toLowerCase();
       if(c.includes('cafe')) return '☕';
@@ -260,124 +295,38 @@
       if(c.includes('school')||c.includes('university')) return '🎓';
       return '📍';
     }
-
-    function renderTaskTarget(place){
-    if(!map || !place || place.lat == null || place.lon == null || !currentLocation) return;
-
-    // clear previous task marker
-    if (taskMarker) { map.removeLayer(taskMarker); taskMarker = null; }
-
-    const userLL  = L.latLng(currentLocation.latitude, currentLocation.longitude);
-    const placeLL = L.latLng(place.lat, place.lon);
-
-    const emoji = (cat => {
-      const c=(cat||'').toLowerCase();
-      if(c.includes('cafe')) return '☕';
-      if(c.includes('restaurant')||c.includes('fast_food')||c.includes('food')) return '🍽️';
-      if(c.includes('park')||c.includes('garden')||c.includes('playground')) return '🌳';
-      if(c.includes('library')) return '📚';
-      if(c.includes('mall')||c.includes('retail')||c.includes('market')) return '🏬';
-      if(c.includes('supermarket')||c.includes('convenience')) return '🛒';
-      if(c.includes('bar')||c.includes('pub')) return '🍺';
-      if(c.includes('museum')||c.includes('gallery')) return '🏛️';
-      if(c.includes('hotel')) return '🏨';
-      if(c.includes('hospital')||c.includes('clinic')) return '🏥';
-      if(c.includes('school')||c.includes('university')) return '🎓';
-      return '📍';
-    })(place.category);
-
-    const esc = s => String(s||'')
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
-      .replace(/'/g,'&#039;');
-
-    const name = esc(place.name || 'Task location');
-    const gMaps = `https://www.google.com/maps?q=${place.lat},${place.lon}`;
-    const aMaps = `https://maps.apple.com/?q=${place.lat},${place.lon}`;
-
-    taskMarker = L.marker([place.lat, place.lon], { icon: redIcon })
-      .addTo(map)
-      .bindPopup(`
-        <div style="font-weight:600;">${emoji} ${name}</div>
-        <div style="font-size:12px;color:#555;margin-top:6px;">
-          <a href="${gMaps}" target="_blank" rel="noopener">Open in Google Maps</a>
-          &nbsp;·&nbsp;
-          <a href="${aMaps}" target="_blank" rel="noopener">Apple Maps</a>
-        </div>
-      `, { autoClose:false, closeOnClick:false })
-      .openPopup();
-
-    // 👇 Show both pins (blue current + red task) in frame
-    const bounds = L.latLngBounds([userLL, placeLL]);
-    map.fitBounds(bounds, { padding: [30,30], maxZoom: 16 });
-  }
     function clearTaskTarget(){
       if(taskMarker){ map && map.removeLayer(taskMarker); taskMarker=null; }
     }
+    function renderTaskTarget(place){
+      if(!map || !place || place.lat==null || place.lon==null || !currentLocation) return;
+      clearTaskTarget();
+      const userLL  = L.latLng(currentLocation.latitude, currentLocation.longitude);
+      const placeLL = L.latLng(place.lat, place.lon);
+      const emoji = getCategoryEmoji(place.category);
+      const name  = place.name || 'Task location';
+      const label = `${emoji} ${escapeHtml(name)}`;
+      const gMaps = `https://www.google.com/maps?q=${place.lat},${place.lon}`;
+      const aMaps = `https://maps.apple.com/?q=${place.lat},${place.lon}`;
 
-    function escapeHtml(s=''){
-  return String(s)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-    .replace(/'/g,'&#039;');
-}
+      taskMarker = L.marker([place.lat, place.lon], { icon: redIcon })
+        .addTo(map)
+        .bindPopup(
+          `
+          <div style="font-weight:600;">${label}</div>
+          <div style="font-size:12px;color:#555;margin-top:6px;">
+            <a href="${gMaps}" target="_blank" rel="noopener">Open in Google Maps</a>
+            &nbsp;·&nbsp;
+            <a href="${aMaps}" target="_blank" rel="noopener">Apple Maps</a>
+          </div>
+          `,
+          { autoClose:false, closeOnClick:false }
+        )
+        .openPopup();
 
-function getCategoryEmoji(cat){
-  const c=(cat||'').toLowerCase();
-  if(c.includes('cafe')) return '☕';
-  if(c.includes('restaurant')||c.includes('fast_food')||c.includes('food')) return '🍽️';
-  if(c.includes('park')||c.includes('garden')||c.includes('playground')) return '🌳';
-  if(c.includes('library')) return '📚';
-  if(c.includes('mall')||c.includes('retail')||c.includes('market')) return '🏬';
-  if(c.includes('supermarket')||c.includes('convenience')) return '🛒';
-  if(c.includes('bar')||c.includes('pub')) return '🍺';
-  if(c.includes('museum')||c.includes('gallery')) return '🏛️';
-  if(c.includes('hotel')) return '🏨';
-  if(c.includes('hospital')||c.includes('clinic')) return '🏥';
-  if(c.includes('school')||c.includes('university')) return '🎓';
-  return '📍';
-}
-
-function clearTaskTarget(){
-  if(taskMarker){ map && map.removeLayer(taskMarker); taskMarker=null; }
-}
-
-function renderTaskTarget(place){
-  if(!map || !place || place.lat==null || place.lon==null || !currentLocation) return;
-  clearTaskTarget();
-
-  const userLL  = L.latLng(currentLocation.latitude, currentLocation.longitude);
-  const placeLL = L.latLng(place.lat, place.lon);
-
-  const emoji = getCategoryEmoji(place.category);
-  const name  = place.name || 'Task location';
-  const label = `${emoji} ${escapeHtml(name)}`;
-
-  // Build navigation links
-  const gMaps = `https://www.google.com/maps?q=${place.lat},${place.lon}`;
-  const aMaps = `https://maps.apple.com/?q=${place.lat},${place.lon}`;
-
-  taskMarker = L.marker([place.lat, place.lon], { icon: redIcon })
-    .addTo(map)
-    .bindPopup(
-      `
-      <div style="font-weight:600;">${label}</div>
-      <div style="font-size:12px;color:#555;margin-top:6px;">
-        <a href="${gMaps}" target="_blank" rel="noopener">Open in Google Maps</a>
-        &nbsp;·&nbsp;
-        <a href="${aMaps}" target="_blank" rel="noopener">Apple Maps</a>
-      </div>
-      `,
-      { autoClose:false, closeOnClick:false }
-    )
-    .openPopup();
-
-  // Show both pins nicely
-  const bounds = L.latLngBounds([userLL, placeLL]).pad(0.25);
-  map.fitBounds(bounds);
-}
+      const bounds = L.latLngBounds([userLL, placeLL]).pad(0.25);
+      map.fitBounds(bounds,{maxZoom:16});
+    }
 
     async function generateTask(){
       if(!currentLocation){ showStatus('📍 Please allow location first before generating a task.','error'); return; }
@@ -389,6 +338,10 @@ function renderTaskTarget(place){
         const data=await res.json();
         if(res.ok){
           currentTask=data;
+
+          show($('feedbackButtons'), true);
+          show($('thumbDownReason'), false);
+
           if (data && data.selected_place && data.selected_place.lat != null && data.selected_place.lon != null) {
             renderTaskTarget(data.selected_place);
           } else {
@@ -400,7 +353,15 @@ function renderTaskTarget(place){
           show($('videoSection'),false); show($('audioSection'),false); show($('textSection'),false);
           $('photoBtn').className='btn'; $('videoBtn').className='btn btn-secondary'; $('audioBtn').className='btn btn-secondary'; $('textBtn').className='btn btn-secondary';
           clearCaptureAlert(); $('taskText').textContent=data.task; show($('taskContainer'),true); show($('uploadSection'),true);
-          showTaskStatus(`🎯 Task generated for ${data.location_type} location!`,'success'); $('uploadSection').scrollIntoView({behavior:'smooth',block:'center'}); restoreMapIfHidden();
+          $('taskText').textContent = data.task;
+
+          // 👇 Add this below
+          show($('feedbackButtons'), true);
+          show($('thumbDownReason'), false);
+
+          showTaskStatus(`🎯 Task generated for ${data.location_type} location!`, 'success');
+          // $('uploadSection').scrollIntoView({behavior:'smooth',block:'center'}); 
+          restoreMapIfHidden();
         }else{ showStatus(data.error||'Failed to generate task','error'); }
       }catch(e){ if(e.name!=='AbortError') showStatus('Error generating task: '+e.message,'error'); }
       finally{ showLoading(false); }
@@ -412,15 +373,28 @@ function renderTaskTarget(place){
       if(showIt){ p.textContent=msgs[Math.floor(Math.random()*msgs.length)]; show(d,true); } else { show(d,false); restoreMapIfHidden(); }
     }
     function showStatus(message,type){ const s=$('status'); s.textContent=message; s.className=`status ${type}`; show(s,true); setTimeout(()=>show(s,false),5000); }
-    function showTaskStatus(message,type){ const s=$('taskStatus'); s.textContent=message; s.className=`status ${type}`; show(s,true); setTimeout(()=>show(s,false),5000); }
+    function showTaskStatus(message, type) {
+      const s = $('feedbackStatus');
+      s.textContent = message;
+      s.className = `status ${type}`;
+      show(s, true);
+
+      // Auto-hide after a few seconds
+      setTimeout(() => {
+        show(s, false);
+      }, 5000);
+    }
     function showCaptureAlert(msg,type='error'){ const el=$('captureAlert'); el.className=`inline-alert ${type}`; el.textContent=msg; show(el,true); el.scrollIntoView({behavior:'smooth',block:'center'}); }
     function clearCaptureAlert(){ const el=$('captureAlert'); show(el,false); el.textContent=''; el.className='inline-alert'; }
     function checkTaskBeforeRecording(){ if(!currentTask||!currentTask.task){ showCaptureAlert('⚠️ Please generate a task before capturing your moment!'); return false;} clearCaptureAlert(); return true; }
 
     function setMediaType(type){
       currentMediaType=type;
-      if(!currentTask||!currentTask.task){ showCaptureAlert('⚠️ Please generate a task before capturing your moment!','error');
-        ['photoCaptureSection','videoSection','audioSection','textSection'].forEach(id=>show($(id),false)); return; }
+      if(!currentTask||!currentTask.task){
+        showCaptureAlert('⚠️ Please generate a task before capturing your moment!','error');
+        ['photoCaptureSection','videoSection','audioSection','textSection'].forEach(id=>show($(id),false));
+        return;
+      }
       clearCaptureAlert();
       ['photo','video','audio','text'].forEach(bt=>{ $(`${bt}Btn`).className = (type===bt)?'btn':'btn btn-secondary';});
       ['photoCaptureSection','videoSection','audioSection','textSection'].forEach(id=>show($(id),false));
@@ -442,13 +416,17 @@ function renderTaskTarget(place){
     function setupMediaUpload(){ /* reserved for manual uploads */ }
 
     function safeRecorder(stream, fallbackTypes){
-      for(const t of fallbackTypes){ if(MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)){ try{ return new MediaRecorder(stream,{mimeType:t}); }catch{} } }
-      try{ return new MediaRecorder(stream); }catch{ return new MediaRecorder(stream); }
+      for(const t of fallbackTypes){
+        if(MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)){
+          try{ return new MediaRecorder(stream,{mimeType:t}); }catch{}
+        }
+      }
+      return new MediaRecorder(stream);
     }
 
     async function startVideoRecording(){
       if(!checkTaskBeforeRecording()) return;
-      suppressOnStop=false; recordedChunks=[]; $('mediaPreview').innerHTML=''; show($('actionButtons'),false);
+      suppressOnStop=false; recordedChunks=[]; $('mediaPreview').innerHTML=''; show($('actionButtons'),false); clearMediaError();
       try{
         videoStream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});
         const vp=$('videoPreview'); vp.srcObject=videoStream; show(vp,true);
@@ -458,13 +436,14 @@ function renderTaskTarget(place){
           const blob=new Blob(recordedChunks,{type: recordedChunks[0]?.type || 'video/webm'}); if(blob.size===0) return;
           const url=URL.createObjectURL(blob);
           const v=document.createElement('video'); v.src=url; v.controls=true; v.style.width='100%'; v.style.maxHeight='300px'; v.style.borderRadius='10px';
-          const mp=$('mediaPreview'); mp.innerHTML=''; mp.appendChild(v); show($('actionButtons'),true); uploadedMedia=blob; showStatus('🎬 Video recorded!','success');
+          const mp=$('mediaPreview'); mp.innerHTML=''; mp.appendChild(v); show($('actionButtons'),true); uploadedMedia=blob;
+          flashPreview('videoPreview');
           setTimeout(()=>mp.scrollIntoView({behavior:'smooth',block:'center'}),300);
           v.onloadeddata=()=>URL.revokeObjectURL(url);
         };
-        mediaRecorder.start(); startCountdown(30); show($('startVideoBtn'),false); show($('stopVideoBtn'),true); showStatus('🎥 Recording started (max 30s)...','success');
+        mediaRecorder.start(); startCountdown(30); show($('startVideoBtn'),false); show($('stopVideoBtn'),true);
         videoTimer=setTimeout(()=>{ if(mediaRecorder&&mediaRecorder.state==='recording') stopVideoRecording(); },30000);
-      }catch(e){ showStatus('❌ Error accessing camera: '+e.message,'error'); }
+      }catch(e){ showMediaError('Error accessing camera/mic: '+(e?.message||e)); }
       finally{ restoreMapIfHidden(); }
     }
     function stopVideoRecording(){
@@ -476,7 +455,7 @@ function renderTaskTarget(place){
 
     async function startAudioRecording(){
       if(!checkTaskBeforeRecording()) return;
-      suppressOnStop=false; recordedChunks=[]; $('mediaPreview').innerHTML=''; show($('actionButtons'),false);
+      suppressOnStop=false; recordedChunks=[]; $('mediaPreview').innerHTML=''; show($('actionButtons'),false); clearMediaError();
       try{
         audioStream=await navigator.mediaDevices.getUserMedia({audio:true});
         mediaRecorder = safeRecorder(audioStream, ['audio/webm;codecs=opus','audio/ogg;codecs=opus']);
@@ -485,13 +464,14 @@ function renderTaskTarget(place){
           const blob=new Blob(recordedChunks,{type: recordedChunks[0]?.type || 'audio/webm'}); if(blob.size===0) return;
           const url=URL.createObjectURL(blob);
           const a=document.createElement('audio'); a.src=url; a.controls=true; a.style.width='100%';
-          const mp=$('mediaPreview'); mp.innerHTML=''; mp.appendChild(a); show($('actionButtons'),true); uploadedMedia=blob; showStatus('🎧 Audio recorded!','success');
+          const mp=$('mediaPreview'); mp.innerHTML=''; mp.appendChild(a); show($('actionButtons'),true); uploadedMedia=blob;
+          flashPreview('audioPreview');
           setTimeout(()=>mp.scrollIntoView({behavior:'smooth',block:'center'}),300);
           a.onloadeddata=()=>URL.revokeObjectURL(url);
         };
-        mediaRecorder.start(); startCountdown(30); show($('startAudioBtn'),false); show($('stopAudioBtn'),true); showStatus('🎙️ Recording started (max 30s)...','success');
+        mediaRecorder.start(); startCountdown(30); show($('startAudioBtn'),false); show($('stopAudioBtn'),true);
         audioTimer=setTimeout(()=>{ if(mediaRecorder&&mediaRecorder.state==='recording') stopAudioRecording(); },30000);
-      }catch(e){ showStatus('❌ Error accessing microphone: '+e.message,'error'); }
+      }catch(e){ showMediaError('Error accessing microphone: '+(e?.message||e)); }
     }
     function stopAudioRecording(){
       if(mediaRecorder && mediaRecorder.state==='recording'){ stopCountdown(); try{mediaRecorder.stop();}catch{} }
@@ -504,11 +484,12 @@ function renderTaskTarget(place){
     $('startPhotoBtn').addEventListener('click', async ()=>{
       if(!checkTaskBeforeRecording()) return;
       try{
+        clearMediaError();
         photoStream=await navigator.mediaDevices.getUserMedia({video:true});
         const v=$('photoPreview'); v.srcObject=photoStream; show(v,true); show($('photoCanvas'),false);
         show($('startPhotoBtn'),false); show($('capturePhotoBtn'),true); show($('closePhotoBtn'),true);
-        showStatus('Camera ready! Tap 📸 Capture to take a photo.','success'); v.scrollIntoView({behavior:'smooth',block:'center'});
-      }catch(err){ showStatus('❌ Unable to access camera: '+err.message,'error'); } finally{ restoreMapIfHidden(); }
+        v.scrollIntoView({behavior:'smooth',block:'center'});
+      }catch(err){ showMediaError('Unable to access camera: '+(err?.message||err)); } finally{ restoreMapIfHidden(); }
     });
 
     $('capturePhotoBtn').addEventListener('click', ()=>{
@@ -524,7 +505,8 @@ function renderTaskTarget(place){
         uploadedMedia=blob;
         const url=URL.createObjectURL(blob);
         const img=new Image(); img.src=url; img.style.display='block'; img.style.margin='10px auto'; img.style.borderRadius='10px'; img.style.maxWidth='100%'; img.style.maxHeight='300px'; img.style.boxShadow='0 2px 10px rgba(0,0,0,.2)';
-        const mp=$('mediaPreview'); mp.innerHTML=''; mp.appendChild(img); show($('actionButtons'),true); showStatus('📸 Photo captured! You can download or delete it.','success');
+        const mp=$('mediaPreview'); mp.innerHTML=''; mp.appendChild(img); show($('actionButtons'),true);
+        flashPreview('photoCanvas');
         setTimeout(()=>mp.scrollIntoView({behavior:'smooth',block:'center'}),300);
         img.onload=()=>URL.revokeObjectURL(url);
       },'image/jpeg');
@@ -533,7 +515,7 @@ function renderTaskTarget(place){
     $('closePhotoBtn').addEventListener('click', ()=>{
       if(photoStream){ photoStream.getTracks().forEach(t=>t.stop()); photoStream=null; }
       show($('photoPreview'),false); show($('photoCanvas'),false); show($('startPhotoBtn'),true); show($('capturePhotoBtn'),false); show($('closePhotoBtn'),false);
-      showStatus('Camera stopped.','success'); restoreMapIfHidden();
+      restoreMapIfHidden();
     });
 
     function downloadMedia(){
@@ -545,7 +527,6 @@ function renderTaskTarget(place){
       link.href=url; link.download=`hoppi-${currentMediaType}-${getTimestamp()}.${ext}`;
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
       setTimeout(()=>URL.revokeObjectURL(url),0);
-      showStatus(`${currentMediaType[0].toUpperCase()+currentMediaType.slice(1)} downloaded successfully!`,'success');
     }
 
     function deleteMedia(){
@@ -555,7 +536,18 @@ function renderTaskTarget(place){
       else if(currentMediaType==='video'){ show($('videoPreview'),false); show($('startVideoBtn'),true); show($('stopVideoBtn'),false); }
       else if(currentMediaType==='audio'){ show($('audioPreview'),false); show($('startAudioBtn'),true); show($('stopAudioBtn'),false); }
       else if(currentMediaType==='text'){ textDraft=''; $('textInput').value=''; $('wordCount').textContent='0 / 300 characters'; }
-      showStatus('🗑 Media deleted successfully.','success');
+      // clear previous submit result when deleting media
+      show($('submitLoading'),false);
+      const ans=$('submitAnswer'); ans.textContent=''; ans.className='status'; show(ans,false);
+    }
+
+    // Submit area helpers
+    function setSubmitAnswer(text, kind='success'){
+      const ans=$('submitAnswer');
+      ans.textContent = text;
+      ans.className = `status ${kind}`;
+      show(ans,true);
+      ans.scrollIntoView({behavior:'smooth',block:'nearest'});
     }
 
     // Submit with judge (expects /submit backend)
@@ -566,6 +558,12 @@ function renderTaskTarget(place){
     }
     async function submitMedia(){
       if(!currentTask||!currentTask.task){ showCaptureAlert('⚠️ Please generate a task before submitting!','error'); return; }
+      if(currentMediaType!=='text' && !uploadedMedia){ showCaptureAlert('⚠️ Record or upload something first.','error'); return; }
+
+      // reset submit UI
+      const ans=$('submitAnswer'); ans.textContent=''; ans.className='status'; show(ans,false);
+      show($('submitLoading'),true);
+
       const fd=new FormData();
       fd.append('session_id',getOrCreateSessionId());
       fd.append('task',currentTask.task);
@@ -573,25 +571,28 @@ function renderTaskTarget(place){
       if(currentLocation){ fd.append('lat',String(currentLocation.latitude)); fd.append('lon',String(currentLocation.longitude)); }
       if(currentMediaType==='text'){ fd.append('text',typeof textDraft==='string'?textDraft:$('textInput').value||''); }
       else{
-        if(!uploadedMedia){ showCaptureAlert('⚠️ Record or upload something first.','error'); return; }
         const ext=currentMediaType==='photo'?'jpg':'webm';
         const file=new File([uploadedMedia],`submission-${getTimestamp()}.${ext}`,{type: uploadedMedia.type || (currentMediaType==='photo'?'image/jpeg':'video/webm')});
         fd.append('file',file);
       }
-      const loading=$('loading'); loading.querySelector('p').textContent="🧠 Letting Hoppi judge your masterpiece..."; show(loading,true);
+
       try{
         const res=await fetch('/submit',{method:'POST',body:fd});
         const data=await res.json();
         if(!res.ok||!data.ok){ throw new Error(data.error||'Submit failed'); }
-        showTaskStatus(data.judge_text,'success');
+        setSubmitAnswer(data.judge_text,'success');
+        // optional: keep global progress ping
         showStatus(data.surprise_ready? "🎁 You’ve hit 5! Your surprise is ready to export." : `🔥 ${data.count}/5 done. ${data.remaining} to unlock your surprise.`,'success');
-      }catch(e){ showStatus('❌ '+e.message,'error'); }
-      finally{ show(loading,false); }
+      }catch(e){
+        setSubmitAnswer('❌ '+(e?.message||e),'error');
+      }finally{
+        show($('submitLoading'),false);
+      }
     }
 
     function restoreMapIfHidden(){
       const mc=$('mapContainer');
-      if(mc && mc.style.display!=='none' && map){
+      if(mc && mc.style.display!=='none' && map && currentLocation){
         setTimeout(()=>{ map.invalidateSize(); map.panTo([currentLocation.latitude,currentLocation.longitude]); },500);
       }
     }
@@ -602,11 +603,60 @@ function renderTaskTarget(place){
     };
 
     $('textInput').addEventListener('input',function(){
-      let text=this.value; if(text.length>300){ text=text.slice(0,300); this.value=text; showStatus('⚠️ You can write up to 300 characters only.','error'); }
+      let text=this.value;
+      if(text.length>300){
+        text=text.slice(0,300); this.value=text;
+        showMediaError('You can write up to 300 characters only.');
+      } else {
+        clearMediaError();
+      }
       textDraft=text; $('wordCount').textContent=`${text.length} / 300 characters`;
       const ab=$('actionButtons'); if(text.length>0){ show(ab,true); uploadedMedia=new Blob([text],{type:'text/plain'});} else { show(ab,false); uploadedMedia=null; }
     });
 
+    $('thumbUpBtn').addEventListener('click', () => {
+      if (!currentTask?.task) return;
+      sendFeedback('up', currentTask.prompt || '', currentTask.task);
+      show($('feedbackButtons'), false);  // <-- HIDE BUTTONS AFTER VOTE
+    });
+
+    $('thumbDownBtn').addEventListener('click', () => {
+      if (!currentTask?.task) return;
+      show($('thumbDownReason'), true);
+      show($('feedbackButtons'), false);  // <-- HIDE BUTTONS AFTER VOTE
+    });
+
+    $('submitFeedbackBtn').addEventListener('click', () => {
+      const reason = $('feedbackReason').value || '';
+      sendFeedback('down', currentTask.prompt || '', currentTask.task, reason);
+      show($('thumbDownReason'), false);
+      $('feedbackReason').value = '';
+    });
+
+    function sendFeedback(rating, input, output, reason = null) {
+    fetch('/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rating, input, output, reason })
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          const s = $('feedbackStatus');
+          s.textContent = "Thanks for your feedback!";
+          s.className = "status success";
+          show(s, true);
+          setTimeout(() => show(s, false), 5000);
+        } else {
+          showStatus(data.error || "Feedback failed", "error");
+        }
+      })
+      .catch(e => {
+        showStatus("Error sending feedback: " + e.message, "error");
+      });
+  }
+
+    // Wire up
     $('newTaskBtn').addEventListener('click',generateTask);
     $('downloadBtn').addEventListener('click',downloadMedia);
     $('submitBtn').addEventListener('click',submitMedia);
@@ -620,7 +670,42 @@ function renderTaskTarget(place){
     $('audioBtn').addEventListener('click',()=>setMediaType('audio'));
     $('textBtn').addEventListener('click',()=>setMediaType('text'));
     $('getLocationBtn').addEventListener('click',getLocation);
+    
+    $('thumbUpBtn').addEventListener('click', () => {
+  if (!currentTask?.task) return;
+  sendFeedback('up', currentTask.prompt || '', currentTask.task);
+});
 
+$('thumbDownBtn').addEventListener('click', () => {
+  if (!currentTask?.task) return;
+  show($('thumbDownReason'), true);
+});
+
+$('submitFeedbackBtn').addEventListener('click', () => {
+  const reason = $('feedbackReason').value || '';
+  sendFeedback('down', currentTask.prompt || '', currentTask.task, reason);
+  show($('thumbDownReason'), false);
+  $('feedbackReason').value = '';
+});
+
+function sendFeedback(rating, input, output, reason=null) {
+  fetch('/feedback', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ rating, input, output, reason })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      showTaskStatus("Thanks for your feedback!", "success");
+    } else {
+      showTaskStatus(data.error || "Feedback failed", "error");
+    }
+  })
+  .catch(e => {
+    showStatus("Error sending feedback: " + e.message, "error");
+  });
+}
     getLocation();
   </script>
 </body>
