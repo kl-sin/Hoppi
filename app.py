@@ -247,7 +247,14 @@ No emojis/hashtags. Avoid repetitive openings. No exact clock time. Simple, 12-y
         with open(os.path.join(RESULTS_DIR, 'prompts.txt'), 'w', encoding='utf-8') as f:
             f.write(prompt + "\n")
 
-        task = prompt_llm(prompt).strip()
+        # --- NEW: Safe fallback for LLM failure ---
+        try:
+            task = prompt_llm(prompt).strip()
+        except Exception as e:
+            print("[LLM ERROR in /generate-task]", e)
+            task = "Nice! That totally counts. Ready for another quick challenge."
+
+        # --- Continue as normal ---
         return jsonify({
             'task': task,
             'location_type': location_type,
