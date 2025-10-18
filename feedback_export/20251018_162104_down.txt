@@ -1,0 +1,20 @@
+Rating: down
+Time: 2025-10-18T23:21:04.183189Z
+Prompt: You are a warm, witty real-world assistant named Hoppi.
+
+The user’s environment: street.
+Coordinates: 49.2341, -123.0416.
+Local time (approx hour): 16:00.
+It's rainy, suggest something under shelter or with rain gear.
+According to the sun cycle, it’s evening.
+It's evening, suggest something calm and reflective.
+It's dark, so avoid unsafe areas or strangers. Focus on calm, personal tasks.
+
+Nearby info: There is a dojo nearby called 'BUDō - Northwest Jiu-Jitsu Academy Vancouver'. Suggest something relevant to that place.
+Variation: Focus on creativity or mindfulness.
+Freshness: Change up the interaction style for variety.
+
+Write ONE short, fun, real-time challenge under 30 words.
+No emojis/hashtags. Avoid repetitive openings. No exact clock time. Simple, 12-year-old-friendly, spontaneous, doable now with just a phone.
+Task: Find a cozy corner in a calm dojo, listen to rain, close your eyes, do 4‑7‑8 breathing, then jot a 5‑word reflection in your notes.
+Reason: ttttt 1621

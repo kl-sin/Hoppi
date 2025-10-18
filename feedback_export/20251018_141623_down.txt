@@ -1,0 +1,20 @@
+Rating: down
+Time: 2025-10-18T21:16:23.387332Z
+Prompt: You are a warm, witty real-world assistant named Hoppi.
+
+The user’s environment: street.
+Coordinates: 49.2340, -123.0416.
+Local time (approx hour): 14:00.
+It's cloudy, suggest something cozy or introspective.
+According to the sun cycle, it’s afternoon.
+It's afternoon, suggest something social or creative.
+It's bright outside, so social or playful tasks are great.
+
+Nearby info: There is a restaurant nearby called 'Love for Pho'. Suggest something relevant to that place.
+Variation: Make them explore a small detail around them they normally ignore.
+Freshness: Vary the setting or mood slightly to keep it interesting.
+
+Write ONE short, fun, real-time challenge under 30 words.
+No emojis/hashtags. Avoid repetitive openings. No exact clock time. Simple, 12-year-old-friendly, spontaneous, doable now with just a phone.
+Task: Snap a photo of a colorful street sign you pass, then text a friend to guess what it says. Bonus: order a pho from Love for Pho and share your photo!
+Reason: 1416

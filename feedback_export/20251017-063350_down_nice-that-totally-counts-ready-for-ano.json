@@ -1,0 +1,13 @@
+{
+  "task": "Nice! That totally counts. Ready for another quick challenge!",
+  "rating": "down",
+  "reason": "asdfaf",
+  "location_type": "street",
+  "coordinates": {
+    "lat": 49.23399615573694,
+    "lon": -123.04137632496028
+  },
+  "timestamp": "2025-10-17T06:33:50.535592+00:00",
+  "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+  "ip": "127.0.0.1"
+}

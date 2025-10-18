@@ -671,41 +671,7 @@
     $('textBtn').addEventListener('click',()=>setMediaType('text'));
     $('getLocationBtn').addEventListener('click',getLocation);
     
-    $('thumbUpBtn').addEventListener('click', () => {
-  if (!currentTask?.task) return;
-  sendFeedback('up', currentTask.prompt || '', currentTask.task);
-});
-
-$('thumbDownBtn').addEventListener('click', () => {
-  if (!currentTask?.task) return;
-  show($('thumbDownReason'), true);
-});
-
-$('submitFeedbackBtn').addEventListener('click', () => {
-  const reason = $('feedbackReason').value || '';
-  sendFeedback('down', currentTask.prompt || '', currentTask.task, reason);
-  show($('thumbDownReason'), false);
-  $('feedbackReason').value = '';
-});
-
-function sendFeedback(rating, input, output, reason=null) {
-  fetch('/feedback', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ rating, input, output, reason })
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data.ok) {
-      showTaskStatus("Thanks for your feedback!", "success");
-    } else {
-      showTaskStatus(data.error || "Feedback failed", "error");
-    }
-  })
-  .catch(e => {
-    showStatus("Error sending feedback: " + e.message, "error");
-  });
-}
+  
     getLocation();
   </script>
 </body>

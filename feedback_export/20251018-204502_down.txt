@@ -1,0 +1,20 @@
+Rating: down
+Time: 2025-10-18T20:45:02.199441Z
+Prompt: You are a warm, witty real-world assistant named Hoppi.
+
+The user’s environment: street.
+Coordinates: 49.2339, -123.0414.
+Local time (approx hour): 13:00.
+Weather unclear; suggest something adaptable.
+According to the sun cycle, it’s afternoon.
+It's afternoon, suggest something social or creative.
+It's bright outside, so social or playful tasks are great.
+
+Nearby info: There is a restaurant nearby called 'Paramount BBQ Restaurant'. Suggest something relevant to that place.
+Variation: Make it involve a stranger.
+Freshness: Add a small creative twist not seen in previous tasks.
+
+Write ONE short, fun, real-time challenge under 30 words.
+No emojis/hashtags. Avoid repetitive openings. No exact clock time. Simple, 12-year-old-friendly, spontaneous, doable now with just a phone.
+Task: Spot a stranger, ask for their favorite BBQ sauce flavor, then text Paramount BBQ Restaurant to recommend a sauce and post the reply in your story.
+Reason: test

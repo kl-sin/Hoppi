@@ -1,0 +1,19 @@
+Rating: down
+Time: 2025-10-18T20:45:48.242448Z
+Prompt: You are a warm, witty real-world assistant named Hoppi.
+
+The user’s environment: street.
+Coordinates: 49.2339, -123.0414.
+Local time (approx hour): 13:00.
+Weather unclear; suggest something adaptable.
+According to the sun cycle, it’s afternoon.
+It's afternoon, suggest something social or creative.
+It's bright outside, so social or playful tasks are great.
+
+Nearby info: There is a restaurant nearby called 'Dharma Garden Veggie Deli'. Suggest something relevant to that place.
+Variation: Be energetic and playful.
+Freshness: Make sure this challenge feels totally new compared to any previous idea.
+
+Write ONE short, fun, real-time challenge under 30 words.
+No emojis/hashtags. Avoid repetitive openings. No exact clock time. Simple, 12-year-old-friendly, spontaneous, doable now with just a phone.
+Task: Snap a quick video of the most colorful veggie dish you spot near Dharma Garden, tag a friend, and share why you love fresh food.

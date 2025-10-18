@@ -1,9 +1,11 @@
 # /app/app.py
 # Flask server (HF Spaces-safe: writes to /tmp by default)
 from flask import Flask, render_template, request, jsonify, send_file
-import os, json, uuid, random, traceback, requests
+import os, json, uuid, random, traceback, requests 
 from datetime import datetime, timezone, timedelta
+import pytz
 from pathlib import Path
+import atexit, shutil
 from werkzeug.utils import secure_filename
 
 # --- LLM client (safe fallback if llm.py absent) ---
@@ -19,6 +21,21 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER', '/tmp/uploads')
 RESULTS_DIR = os.getenv('RESULTS_DIR', '/tmp/results')
 
+FEEDBACK_DIR = "/tmp/outputs"
+EXPORT_DIR = "./feedback_export"
+
+@atexit.register
+def export_feedback():
+    try:
+        os.makedirs(EXPORT_DIR, exist_ok=True)
+        for f in os.listdir(FEEDBACK_DIR):
+            src = os.path.join(FEEDBACK_DIR, f)
+            dst = os.path.join(EXPORT_DIR, f)
+            shutil.copyfile(src, dst)
+        print("Exported feedback logs to feedback_export/")
+    except Exception as e:
+        print("Error exporting feedback logs:", e)
+
 # 64 MB max upload
 app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024
 
@@ -30,9 +47,11 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 FEEDBACK_DIR = os.getenv("FEEDBACK_DIR", "/tmp/outputs")
 os.makedirs(FEEDBACK_DIR, exist_ok=True)
 
-# --- utils ---
+
 def now_stamp() -> str:
-    return datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    tz = pytz.timezone("America/Vancouver")
+    return datetime.now(tz).strftime("%Y%m%d_%H%M%S")
+
 
 def http_get(url: str, **kw):
     kw.setdefault("timeout", 10)
@@ -336,10 +355,13 @@ def feedback():
             "rating": rating,
             "timestamp": datetime.utcnow().isoformat() + "Z"
         }
+
         if rating == "down" and reason:
             entry["reason"] = reason.strip()
 
         fname = f"{now_stamp()}_{rating}.txt"
+
+        # Save to /tmp/outputs
         with open(os.path.join(FEEDBACK_DIR, fname), "w", encoding="utf-8") as f:
             f.write(f"Rating: {rating}\n")
             f.write(f"Time: {entry['timestamp']}\n")
@@ -348,10 +370,39 @@ def feedback():
             if entry.get("reason"):
                 f.write(f"Reason: {entry['reason']}\n")
 
+        # ✅ Immediate copy to feedback_export
+        try:
+            shutil.copyfile(
+                os.path.join(FEEDBACK_DIR, fname),
+                os.path.join(EXPORT_DIR, fname)
+            )
+        except Exception as e:
+            print("Immediate feedback export failed:", e)
+
         return jsonify({"ok": True})
     except Exception as e:
         print("[ERROR] /feedback failed", traceback.format_exc())
         return jsonify({"error": str(e)}), 500
+
+@app.route("/feedback-logs")
+def list_feedback_logs():
+    try:
+        files = sorted(os.listdir(FEEDBACK_DIR), reverse=True)
+        links = [
+            f'<li><a href="/feedback-logs/{fname}" target="_blank">{fname}</a></li>'
+            for fname in files if fname.endswith(".txt")
+        ]
+        return f"<h3>Feedback Logs</h3><ul>{''.join(links)}</ul>"
+    except Exception as e:
+        return f"<p>Error: {e}</p>", 500
+
+@app.route("/feedback-logs/<filename>")
+def get_feedback(filename):
+    path = os.path.join(FEEDBACK_DIR, filename)
+    if os.path.exists(path):
+        return send_file(path, as_attachment=True)
+    return jsonify({"error": "Not found"}), 404
+
 
 @app.route("/progress/<session_id>", methods=["GET"])
 def progress(session_id: str):
@@ -371,6 +422,7 @@ def download_file(filename):
         return jsonify({'error':'File not found'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+        
 
 if __name__ == "__main__":
     # On local runs you can override PORT; HF sets PORT automatically.
