@@ -331,8 +331,24 @@
     async function generateTask(){
       if(!currentLocation){ showStatus('📍 Please allow location first before generating a task.','error'); return; }
       if(taskAborter) taskAborter.abort();
+      resetCapture(true);
+      $('mediaPreview').innerHTML = '';
+      show($('actionButtons'), false);
+      show($('submitLoading'), false);
+      const ans = $('submitAnswer');
+      ans.textContent = '';
+      ans.className = 'status';
+      show(ans, false);
+      $('submitBtn').style.display = 'inline-block'; // ✅ Re-enable Submit for new task
+
+      textDraft = '';
+      $('textInput').value = '';
+      $('wordCount').textContent = '0 / 300 characters';
+      uploadedMedia = null;
+
       taskAborter = new AbortController();
       showLoading(true);
+
       try{
         const res=await fetch('/generate-task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(currentLocation),signal:taskAborter.signal});
         const data=await res.json();
@@ -343,10 +359,19 @@
           show($('thumbDownReason'), false);
 
           if (data && data.selected_place && data.selected_place.lat != null && data.selected_place.lon != null) {
-            renderTaskTarget(data.selected_place);
-          } else {
-            clearTaskTarget();
+          renderTaskTarget(data.selected_place);
+
+          // 🧭 Center the map on the red pin and open its popup
+          if (map) {
+            map.setView([data.selected_place.lat, data.selected_place.lon], 16, {animate: true});
+            setTimeout(() => {
+              if (taskMarker) taskMarker.openPopup();
+            }, 500);
           }
+        } else {
+          clearTaskTarget();
+        }
+
           ['photoBtn','videoBtn','audioBtn','textBtn'].forEach(id=>$(id).classList.remove('locked'));
           currentMediaType='photo';
           show($('photoCaptureSection'),true); show($('startPhotoBtn'),true);
@@ -436,7 +461,10 @@
           const blob=new Blob(recordedChunks,{type: recordedChunks[0]?.type || 'video/webm'}); if(blob.size===0) return;
           const url=URL.createObjectURL(blob);
           const v=document.createElement('video'); v.src=url; v.controls=true; v.style.width='100%'; v.style.maxHeight='300px'; v.style.borderRadius='10px';
-          const mp=$('mediaPreview'); mp.innerHTML=''; mp.appendChild(v); show($('actionButtons'),true); uploadedMedia=blob;
+          const mp=$('mediaPreview'); mp.innerHTML=''; mp.appendChild(v); 
+          show($('actionButtons'),true); 
+          $('submitBtn').style.display = 'inline-block'; // ✅ Re-show submit
+          uploadedMedia=blob;
           flashPreview('videoPreview');
           setTimeout(()=>mp.scrollIntoView({behavior:'smooth',block:'center'}),300);
           v.onloadeddata=()=>URL.revokeObjectURL(url);
@@ -464,7 +492,10 @@
           const blob=new Blob(recordedChunks,{type: recordedChunks[0]?.type || 'audio/webm'}); if(blob.size===0) return;
           const url=URL.createObjectURL(blob);
           const a=document.createElement('audio'); a.src=url; a.controls=true; a.style.width='100%';
-          const mp=$('mediaPreview'); mp.innerHTML=''; mp.appendChild(a); show($('actionButtons'),true); uploadedMedia=blob;
+          const mp=$('mediaPreview'); mp.innerHTML=''; mp.appendChild(a); 
+          show($('actionButtons'),true); 
+          $('submitBtn').style.display = 'inline-block'; // ✅ Re-show submit
+          uploadedMedia=blob;
           flashPreview('audioPreview');
           setTimeout(()=>mp.scrollIntoView({behavior:'smooth',block:'center'}),300);
           a.onloadeddata=()=>URL.revokeObjectURL(url);
@@ -505,7 +536,9 @@
         uploadedMedia=blob;
         const url=URL.createObjectURL(blob);
         const img=new Image(); img.src=url; img.style.display='block'; img.style.margin='10px auto'; img.style.borderRadius='10px'; img.style.maxWidth='100%'; img.style.maxHeight='300px'; img.style.boxShadow='0 2px 10px rgba(0,0,0,.2)';
-        const mp=$('mediaPreview'); mp.innerHTML=''; mp.appendChild(img); show($('actionButtons'),true);
+        const mp=$('mediaPreview'); mp.innerHTML=''; mp.appendChild(img); 
+        show($('actionButtons'), true);
+        $('submitBtn').style.display = 'inline-block'; // ✅ Re-show submit
         flashPreview('photoCanvas');
         setTimeout(()=>mp.scrollIntoView({behavior:'smooth',block:'center'}),300);
         img.onload=()=>URL.revokeObjectURL(url);
@@ -531,7 +564,10 @@
 
     function deleteMedia(){
       const mp=$('mediaPreview'), ab=$('actionButtons'), mi=$('mediaInput');
-      mp.innerHTML=''; show(ab,false); uploadedMedia=null; if(mi) mi.value='';
+      mp.innerHTML=''; 
+      show(ab,false); 
+      uploadedMedia=null; 
+      if(mi) mi.value='';
       if(currentMediaType==='photo'){ show($('photoPreview'),false); show($('photoCanvas'),false); show($('startPhotoBtn'),true); show($('capturePhotoBtn'),false); show($('closePhotoBtn'),false); }
       else if(currentMediaType==='video'){ show($('videoPreview'),false); show($('startVideoBtn'),true); show($('stopVideoBtn'),false); }
       else if(currentMediaType==='audio'){ show($('audioPreview'),false); show($('startAudioBtn'),true); show($('stopAudioBtn'),false); }
@@ -581,6 +617,10 @@
         const data=await res.json();
         if(!res.ok||!data.ok){ throw new Error(data.error||'Submit failed'); }
         setSubmitAnswer(data.judge_text,'success');
+        
+        // 🧹 Hide submit button to prevent duplicate submission
+        $('submitBtn').style.display = 'none';
+        
         // optional: keep global progress ping
         // showStatus(data.surprise_ready? "🎁 You’ve hit 5! Your surprise is ready to export." : `🔥 ${data.count}/5 done. ${data.remaining} to unlock your surprise.`,'success');
       }catch(e){
@@ -591,11 +631,19 @@
     }
 
     function restoreMapIfHidden(){
-      const mc=$('mapContainer');
-      if(mc && mc.style.display!=='none' && map && currentLocation){
-        setTimeout(()=>{ map.invalidateSize(); map.panTo([currentLocation.latitude,currentLocation.longitude]); },500);
+      const mc = $('mapContainer');
+      if (mc && mc.style.display !== 'none' && map) {
+        setTimeout(() => {
+          map.invalidateSize();
+
+          // 🧭 Only re-pan if no task marker (avoid snapping back to blue pin)
+          if (!taskMarker && currentLocation) {
+            map.panTo([currentLocation.latitude, currentLocation.longitude]);
+          }
+        }, 500);
       }
     }
+
 
     window.onload=function(){
       ['photoBtn','videoBtn','audioBtn','textBtn'].forEach(id=>$(id).classList.add('locked'));
@@ -611,7 +659,12 @@
         clearMediaError();
       }
       textDraft=text; $('wordCount').textContent=`${text.length} / 300 characters`;
-      const ab=$('actionButtons'); if(text.length>0){ show(ab,true); uploadedMedia=new Blob([text],{type:'text/plain'});} else { show(ab,false); uploadedMedia=null; }
+      const ab=$('actionButtons'); 
+      if(text.length>0){ 
+        show(ab, true);
+        $('submitBtn').style.display = 'inline-block'; // ✅ Re-show submit
+        uploadedMedia = new Blob([text], { type: 'text/plain' });
+      } else { show(ab,false); uploadedMedia=null; }
     });
 
     $('thumbUpBtn').addEventListener('click', () => {
