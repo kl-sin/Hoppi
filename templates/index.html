@@ -582,7 +582,7 @@
         if(!res.ok||!data.ok){ throw new Error(data.error||'Submit failed'); }
         setSubmitAnswer(data.judge_text,'success');
         // optional: keep global progress ping
-        showStatus(data.surprise_ready? "🎁 You’ve hit 5! Your surprise is ready to export." : `🔥 ${data.count}/5 done. ${data.remaining} to unlock your surprise.`,'success');
+        // showStatus(data.surprise_ready? "🎁 You’ve hit 5! Your surprise is ready to export." : `🔥 ${data.count}/5 done. ${data.remaining} to unlock your surprise.`,'success');
       }catch(e){
         setSubmitAnswer('❌ '+(e?.message||e),'error');
       }finally{

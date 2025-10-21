@@ -10,12 +10,21 @@ from werkzeug.utils import secure_filename
 
 # --- LLM client (safe fallback if llm.py absent) ---
 try:
-    from llm import prompt_llm
+    from gentask import prompt_llm
 except Exception:
     def prompt_llm(prompt: str) -> str:  # minimal fallback; only used if llm.py missing
         return "Nice! That totally counts. Ready for another quick challenge?"
 
 app = Flask(__name__)
+
+try:
+    from judge import judge_with_gemma as judge_submission_model
+except Exception as e:
+    print("[ERROR] judge.py failed to import:", e)
+    def judge_submission_model(*args, **kwargs):
+        return "Nice job! Looks good to me 👍"
+
+
 
 # --- Writable paths (HF Spaces tip: /tmp is writable) ---
 app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER', '/tmp/uploads')
@@ -178,7 +187,7 @@ def next_index(session_dir: Path) -> int:
     return (max(int(p.name) for p in dirs)+1) if dirs else 1
 
 def judge_submission(task: str, media_type: str, text: str | None, file_path: str | None, lat: float | None, lon: float | None) -> str:
-    sample = f"User wrote: {text[:160]}" if (text and text.strip()) else (f"User submitted a {media_type}." if file_path else "No preview.")
+    sample = text if text else f"User submitted a {media_type} (content unknown)."
     prompt = f"""
 You are Hoppi, a playful, witty judge for real-world mini-challenges.
 Task: {task}
@@ -194,10 +203,13 @@ Rules:
 - No quotes or meta.
 """
     try:
-        return prompt_llm(prompt).strip()
+        # ✅ Use llama model here
+        print("[DEBUG] Using Llama for judging")
+        return judge_submission_model(task, media_type, text, file_path, lat, lon)
     except Exception as e:
         print("[LLM ERROR]", e)
         return "Nice! That totally counts. Ready for another quick challenge?"
+
 
 # --- routes ---
 @app.route('/')
@@ -291,6 +303,47 @@ No emojis/hashtags. Avoid repetitive openings. No exact clock time. Simple, 12-y
         print("[ERROR] Exception in generate-task:", traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
+def summarize_media(file_path, media_type):
+    """Summarize image/audio content so Hoppi can better judge."""
+    if not file_path:
+        return "No file provided."
+
+    # --- 1️⃣ Image captioning (Hugging Face API example) ---
+    if media_type in ("photo", "image", "picture"):
+        try:
+            hf_key = os.getenv("HF_API_KEY", "")
+            res = requests.post(
+                "https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large",
+                headers={"Authorization": f"Bearer {hf_key}"} if hf_key else {},
+                files={"file": open(file_path, "rb")},
+                timeout=30
+            )
+            caption_data = res.json()
+            if isinstance(caption_data, list) and "generated_text" in caption_data[0]:
+                caption = caption_data[0]["generated_text"]
+            else:
+                caption = str(caption_data)
+            return f"Image description: {caption}"
+        except Exception as e:
+            print("[WARN] Image captioning failed:", e)
+            return "Image description unavailable."
+
+    # --- 2️⃣ Audio transcription (Whisper) ---
+    elif media_type in ("audio", "recording", "voice"):
+        try:
+            import openai
+            openai.api_key = os.getenv("OPENAI_API_KEY", "")
+            transcript = openai.Audio.transcribe("whisper-1", open(file_path, "rb"))
+            return f"Audio transcription: {transcript['text']}"
+        except Exception as e:
+            print("[WARN] Audio transcription failed:", e)
+            return "Audio content unavailable."
+
+    # --- 3️⃣ Fallback ---
+    else:
+        return f"Uploaded a {media_type}, but no automatic summary available."
+
+
 @app.route("/submit", methods=["POST"])
 def submit():
     try:
@@ -302,13 +355,20 @@ def submit():
         text = request.form.get("text")
 
         if not task or not media_type:
-            return jsonify({"error":"Missing task or media_type"}), 400
+            return jsonify({"error": "Missing task or media_type"}), 400
 
+        # 🧠 Recompute environmental context
+        location_type = get_location_type(lat, lon)
+        weather_hint = get_weather_hint(lat, lon)
+        period = get_day_period(lat, lon)
+
+        # 🗂️ Ensure directories
         sdir = ensure_session_dir(session_id)
         idx = next_index(sdir)
         entry = sdir / f"{idx:03d}"
         entry.mkdir(parents=True, exist_ok=True)
 
+        # 🖼 Save file if uploaded
         file_path = None
         if "file" in request.files and request.files["file"].filename:
             f = request.files["file"]
@@ -316,26 +376,92 @@ def submit():
             file_path = str(entry / fname)
             f.save(file_path)
 
+        # 📝 Save note if any
         if text and text.strip():
             (entry / "note.txt").write_text(text.strip(), encoding="utf-8")
 
+        # 🧩 Create summary for non-text content
+        if file_path:
+            media_summary = summarize_media(file_path, media_type)
+        else:
+            media_summary = text or "No submission text provided."
+
+        # 💾 Save metadata
         meta = {
-            "session_id": session_id, "index": idx, "task": task, "media_type": media_type,
-            "file": file_path, "text": (text or ""), "lat": lat, "lon": lon,
+            "session_id": session_id,
+            "index": idx,
+            "task": task,
+            "media_type": media_type,
+            "file": file_path,
+            "text": (text or ""),
+            "lat": lat,
+            "lon": lon,
             "created_utc": datetime.utcnow().isoformat() + "Z",
         }
         (entry / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
+        # 📊 Count progress
         total = len([p for p in sdir.iterdir() if p.is_dir() and p.name.isdigit()])
         remaining = max(0, 5 - total)
         surprise_ready = total >= 5
 
-        judge_text = judge_submission(task, media_type, text, file_path, lat, lon)
+        # 🤖 Call judge
+        judge_result = judge_submission_model(
+            task,
+            media_type,
+            media_summary,  # pass preprocessed summary
+            file_path,
+            lat,
+            lon,
+            session_id=session_id,
+            context={
+                "location_type": location_type,
+                "weather_hint": weather_hint,
+                "day_period": period,
+            },
+        )
 
-        return jsonify({"ok": True, "session_id": session_id, "count": total, "remaining": remaining, "surprise_ready": surprise_ready, "judge_text": judge_text})
+        # 🧠 Handle result format
+        if isinstance(judge_result, dict):
+            judge_text = judge_result.get("feedback")
+            fit_score = judge_result.get("fit_score")
+        else:
+            judge_text = judge_result
+            fit_score = None
+
+        # 💾 Save fit_score for analytics
+        if fit_score is not None:
+            meta["fit_score"] = fit_score
+            (entry / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
+        # 🪄 Print summary
+        print("\n───────────── HOPPI JUDGE SUMMARY ─────────────")
+        print(f"🧩 Session ID: {session_id}")
+        print(f"🕹️ Task: {task[:80]}{'...' if len(task) > 80 else ''}")
+        print(f"📍 Location: lat={lat}, lon={lon}")
+        print(f"📸 Media Type: {media_type}")
+        if text:
+            print(f"📝 Text Preview: {text[:100]}{'...' if len(text) > 100 else ''}")
+        if file_path:
+            print(f"📂 File: {os.path.basename(file_path)}")
+        print(f"🤖 Hoppi Feedback: {judge_text}")
+        if fit_score is not None:
+            print(f"🎯 Fit Score: {fit_score:.2f}")
+        print("───────────────────────────────────────────────\n")
+
+        return jsonify({
+            "ok": True,
+            "session_id": session_id,
+            "count": total,
+            "remaining": remaining,
+            "surprise_ready": surprise_ready,
+            "judge_text": judge_text
+        })
+
     except Exception as e:
         print("[ERROR] /submit failed", traceback.format_exc())
         return jsonify({"error": str(e)}), 500
+
 
 @app.route("/feedback", methods=["POST"])
 def feedback():
