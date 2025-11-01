@@ -25,6 +25,7 @@ except Exception as e:
         return "Nice job! Looks good to me 👍"
 
 
+from micronarrative import create_micro_narrative_chapter
 
 # --- Writable paths (HF Spaces tip: /tmp is writable) ---
 app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER', '/tmp/uploads')
@@ -197,7 +198,7 @@ Location: {lat}, {lon}
 
 Rules:
 - One short verdict (<= 35 words).
-- Encouraging, specific, a little cheeky, never mean.
+- Encouraging, specific, a little cheeky, a bit mean.
 - Assume success if ambiguous.
 - End with a nudge to do another task (no emojis/hashtags/bullets).
 - No quotes or meta.
@@ -275,7 +276,9 @@ Variation: {variation_hint}
 Freshness: {freshness_hint}
 
 Write ONE short, fun, real-time challenge under 30 words.
-No emojis/hashtags. Avoid repetitive openings. No exact clock time. Simple, 12-year-old-friendly, spontaneous, doable now with just a phone.
+No emojis/hashtags. Avoid repetitive openings. No exact clock time. 
+Simple, 12-year-old-friendly, spontaneous, doable now with just a phone.
+Each challenge should feel like a tiny chapter in an unfolding story of discovery, not just a standalone act.
 """
         # Write last prompt for debugging/QA (in writable place)
         os.makedirs(RESULTS_DIR, exist_ok=True)
@@ -302,6 +305,8 @@ No emojis/hashtags. Avoid repetitive openings. No exact clock time. Simple, 12-y
     except Exception as e:
         print("[ERROR] Exception in generate-task:", traceback.format_exc())
         return jsonify({'error': str(e)}), 500
+
+
 
 def summarize_media(file_path, media_type):
     """Summarize image/audio content so Hoppi can better judge."""
@@ -342,6 +347,28 @@ def summarize_media(file_path, media_type):
     # --- 3️⃣ Fallback ---
     else:
         return f"Uploaded a {media_type}, but no automatic summary available."
+
+# --- Helper: get recent submissions ---
+def get_user_recent_submissions(session_id, limit=3):
+    """Fetch the user's last N submissions."""
+    session_dir = ensure_session_dir(session_id)
+    dirs = sorted(
+        [p for p in session_dir.iterdir() if p.is_dir() and p.name.isdigit()],
+        key=lambda p: int(p.name),
+        reverse=True
+    )
+    submissions = []
+    for d in dirs[:limit]:
+        meta_path = d / "meta.json"
+        if meta_path.exists():
+            with open(meta_path, "r", encoding="utf-8") as f:
+                meta = json.load(f)
+            submissions.append({
+                "task": meta.get("task", ""),
+                "summary": meta.get("text", "")[:200],
+                "judge_feedback": meta.get("fit_score", ""),
+            })
+    return submissions
 
 
 @app.route("/submit", methods=["POST"])
@@ -409,7 +436,7 @@ def submit():
         judge_result = judge_submission_model(
             task,
             media_type,
-            media_summary,  # pass preprocessed summary
+            media_summary,
             file_path,
             lat,
             lon,
@@ -421,7 +448,6 @@ def submit():
             },
         )
 
-        # 🧠 Handle result format
         if isinstance(judge_result, dict):
             judge_text = judge_result.get("feedback")
             fit_score = judge_result.get("fit_score")
@@ -429,12 +455,11 @@ def submit():
             judge_text = judge_result
             fit_score = None
 
-        # 💾 Save fit_score for analytics
         if fit_score is not None:
             meta["fit_score"] = fit_score
             (entry / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
-        # 🪄 Print summary
+        # 🪄 Log summary
         print("\n───────────── HOPPI JUDGE SUMMARY ─────────────")
         print(f"🧩 Session ID: {session_id}")
         print(f"🕹️ Task: {task[:80]}{'...' if len(task) > 80 else ''}")
@@ -449,13 +474,33 @@ def submit():
             print(f"🎯 Fit Score: {fit_score:.2f}")
         print("───────────────────────────────────────────────\n")
 
+       # --- Micro-narrative generation after 3 submissions ---
+        micro_story = None
+        micro_images = []
+        story_ready = False
+
+        user_submissions = get_user_recent_submissions(session_id, limit=3)
+        if len(user_submissions) == 3:
+            try:
+                story = create_micro_narrative_chapter(user_submissions)
+                micro_story = story.get("story_text")
+                micro_images = story.get("images", [])
+                story_ready = True
+            except Exception as e:
+                print("[ERROR] Micro-narrative generation failed:", e)
+
+
+        # ✅ Return response
         return jsonify({
             "ok": True,
             "session_id": session_id,
             "count": total,
             "remaining": remaining,
             "surprise_ready": surprise_ready,
-            "judge_text": judge_text
+            "judge_text": judge_text,
+            "story_ready": story_ready,
+            "story_text": micro_story,
+            "story_images": micro_images,
         })
 
     except Exception as e:

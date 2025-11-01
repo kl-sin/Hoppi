@@ -134,7 +134,7 @@
       <!-- NEW: submit loader & answer directly under preview -->
       <div id="submitLoading" class="loading" style="display:none">
         <div class="spinner"></div>
-        <p style="color:#667eea;font-weight:bold">🧠 Letting Hoppi judge your masterpiece...</p>
+        <p style="color:#667eea;font-weight:bold">🧠 Hoppi is weaving your story...</p>
       </div>
       <div id="submitAnswer" class="status" style="display:none"></div>
 
@@ -143,6 +143,22 @@
         <button class="btn" id="submitBtn">📤 Submit</button>
         <button class="btn btn-secondary" id="downloadBtn">💾 Download</button>
       </div>
+
+      <!-- Keep New Task separate and always visible after submit -->
+      <div id="newTaskAfterSubmit" style="display:none; margin-top:10px;">
+        <button class="btn" id="genNewTaskBtn">✨ New Task</button>
+      </div>
+
+      <!-- Micro-Narrative Story Strip Section -->
+      <div id="storySection" style="display:none; text-align:center; margin-top:30px;">
+        <h3>📖 Your Hoppi Story Unfolds!</h3>
+        <p id="storyText" style="font-size:1.1em; color:#555; margin:10px 0;"></p>
+
+        <div id="storyStrip" style="display:flex; gap:10px; overflow-x:auto; justify-content:center; margin-top:15px;"></div>
+
+        <button class="btn" id="revealStoryBtn" style="margin-top:15px;">✨ Reveal My Story</button>
+      </div>
+
     </div>
   </div>
 
@@ -170,6 +186,52 @@
       el.textContent = '';
       el.style.display = 'none';
     }
+
+    function initializeStoryProgress() {
+  const count = getCompletedCount();
+  const storiesUnlocked = Math.floor(count / 3);
+  const nextUnlockAt = (storiesUnlocked + 1) * 3;
+  const remaining = nextUnlockAt - count;
+
+  const storySec = $('storySection');
+  const storyText = $('storyText');
+  const storyStrip = $('storyStrip');
+  const revealBtn = $('revealStoryBtn');
+
+  show(storySec, true);
+  show(revealBtn, false); // hide reveal button permanently
+
+  // 🧠 If not yet at 3, 6, 9... show teaser message only
+  if (count < 3 || count % 3 !== 0) {
+    storyText.textContent =
+      count < 3
+        ? `✨ Complete ${remaining} more task${remaining > 1 ? 's' : ''} to unlock your first story!`
+        : `✨ Complete ${remaining} more task${remaining > 1 ? 's' : ''} to unlock your next story!`;
+    storyStrip.innerHTML = '';
+    return;
+  }
+
+  // 🎉 If count is multiple of 3, show the story!
+  const storedText = localStorage.getItem('hoppi_story_pending_text');
+  const storedImages = localStorage.getItem('hoppi_story_pending_images');
+
+  storyText.textContent = storedText
+    ? storedText
+    : `📖 You've unlocked ${storiesUnlocked} story part${storiesUnlocked > 1 ? 's' : ''}!`;
+
+  storyStrip.innerHTML = '';
+  if (storedImages) {
+    JSON.parse(storedImages).forEach(scene => {
+      const img = document.createElement('img');
+      img.src = scene.url;
+      img.alt = scene.title || '';
+      img.style.borderRadius = '12px';
+      img.style.width = '180px';
+      img.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+      storyStrip.appendChild(img);
+    });
+  }
+}
 
     // Subtle success cue
     function flashPreview(elId){
@@ -586,6 +648,20 @@
       ans.scrollIntoView({behavior:'smooth',block:'nearest'});
     }
 
+    function getCompletedCount() {
+      return parseInt(localStorage.getItem('hoppi_completed_count') || '0', 10);
+    }
+
+    function incrementCompletedCount() {
+      const count = getCompletedCount() + 1;
+      localStorage.setItem('hoppi_completed_count', count);
+      return count;
+    }
+
+    function resetCompletedCount() {
+      localStorage.removeItem('hoppi_completed_count');
+    }
+
     // Submit with judge (expects /submit backend)
     function getOrCreateSessionId(){
       const KEY='hoppi_session_id'; let id=localStorage.getItem(KEY);
@@ -620,7 +696,66 @@
         
         // 🧹 Hide submit button to prevent duplicate submission
         $('submitBtn').style.display = 'none';
+
+        $('newTaskAfterSubmit').style.display = 'block';
         
+        
+        // 🌟 Show Guardian Surprise if ready
+        if (data.story_ready && data.story_images && data.story_text) {
+  // Save story content for later chapters (even if not yet unlocked)
+  localStorage.setItem('hoppi_story_pending_text', data.story_text);
+  localStorage.setItem('hoppi_story_pending_images', JSON.stringify(data.story_images));
+}
+
+      // ✅ Increment progress and unlock story after 3 submissions
+      const newCount = incrementCompletedCount();
+      console.log("✅ Completed count:", newCount);
+
+      // --- Progressive story unlock ---
+      // --- Progressive story unlock (auto-show) ---
+const unlockedBefore = Math.floor((newCount - 1) / 3);
+const unlockedNow = Math.floor(newCount / 3);
+
+const storySec = $('storySection');
+const storyText = $('storyText');
+const storyStrip = $('storyStrip');
+const revealBtn = $('revealStoryBtn');
+
+show(storySec, true);
+show(revealBtn, false); // we no longer use it
+
+if (newCount % 3 === 0) {
+  // 🎉 Auto-display story content
+  const storedText = localStorage.getItem('hoppi_story_pending_text');
+  const storedImages = localStorage.getItem('hoppi_story_pending_images');
+
+  storyText.textContent = storedText
+    ? storedText
+    : `✨ Chapter ${unlockedNow} unlocked! ${unlockedNow * 3} tasks completed.`;
+
+  storyStrip.innerHTML = '';
+  if (storedImages) {
+    JSON.parse(storedImages).forEach(scene => {
+      const img = document.createElement('img');
+      img.src = scene.url;
+      img.alt = scene.title || '';
+      img.style.borderRadius = '12px';
+      img.style.width = '180px';
+      img.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+      storyStrip.appendChild(img);
+    });
+  }
+
+  storyStrip.style.display = 'flex';
+  storyStrip.scrollIntoView({ behavior: 'smooth', block: 'center' });
+} else {
+  // 🕓 Not yet unlocked — show motivational message
+  const nextUnlockAt = (unlockedNow + 1) * 3;
+  const remaining = nextUnlockAt - newCount;
+  storyText.textContent = `✨ Complete ${remaining} more task${remaining > 1 ? 's' : ''} to unlock your next story!`;
+  storyStrip.innerHTML = '';
+}
+
         // optional: keep global progress ping
         // showStatus(data.surprise_ready? "🎁 You’ve hit 5! Your surprise is ready to export." : `🔥 ${data.count}/5 done. ${data.remaining} to unlock your surprise.`,'success');
       }catch(e){
@@ -647,7 +782,17 @@
 
     window.onload=function(){
       ['photoBtn','videoBtn','audioBtn','textBtn'].forEach(id=>$(id).classList.add('locked'));
-      show($('startPhotoBtn'),false); show($('startVideoBtn'),false); show($('startAudioBtn'),false); show($('textSection'),false);
+      show($('startPhotoBtn'),false); 
+      show($('startVideoBtn'),false); 
+      show($('startAudioBtn'),false); s
+      how($('textSection'),false);
+      $('newTaskAfterSubmit').style.display = 'none'; // ✅ start hidden
+      
+      // ✅ Force-hide story section before checking unlock state
+      $('storySection').style.display = 'none';
+      $('revealStoryBtn').style.display = 'none';
+      
+      initializeStoryProgress(); // renamed version
     };
 
     $('textInput').addEventListener('input',function(){
@@ -710,7 +855,17 @@
   }
 
     // Wire up
-    $('newTaskBtn').addEventListener('click',generateTask);
+    $('genNewTaskBtn').addEventListener('click', () => {
+      $('newTaskAfterSubmit').style.display = 'none'; // hide while loading next task
+      document.querySelector('#taskContainer h3')
+        .scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => generateTask(), 800);
+    });
+    $('newTaskBtn').addEventListener('click', () => {
+      document.querySelector('#taskContainer h3')
+        .scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => generateTask(), 800);
+    });
     $('downloadBtn').addEventListener('click',downloadMedia);
     $('submitBtn').addEventListener('click',submitMedia);
     $('deleteBtn').addEventListener('click',deleteMedia);

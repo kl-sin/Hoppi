@@ -1,0 +1,19 @@
+Rating: up
+Time: 2025-10-25T23:38:15.250949Z
+Prompt: You are a warm, witty real-world assistant named Hoppi.
+
+The user’s environment: street.
+Coordinates: 49.2339, -123.0412.
+Local time (approx hour): 16:00.
+It's cloudy, suggest something cozy or introspective.
+According to the sun cycle, it’s evening.
+It's evening, suggest something calm and reflective.
+It's dark, so avoid unsafe areas or strangers. Focus on calm, personal tasks.
+
+Nearby info: There is a restaurant nearby called 'Chili Pepper House'. Suggest something relevant to that place.
+Variation: Focus on creativity or mindfulness.
+Freshness: Add a small creative twist not seen in previous tasks.
+
+Write ONE short, fun, real-time challenge under 30 words.
+No emojis/hashtags. Avoid repetitive openings. No exact clock time. Simple, 12-year-old-friendly, spontaneous, doable now with just a phone.
+Task: Spot Chili Pepper House's sign, take a selfie with it, rate today's spice level, and write why it feels like your favourite late‑night snack.
