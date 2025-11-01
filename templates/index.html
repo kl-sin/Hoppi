@@ -46,8 +46,8 @@
 </head>
 <body>
   <div class="container">
-    <div class="logo">🎯 Hoppi</div>
-    <div class="subtitle">Turn the real world into your playground!</div>
+    <div class="logo">Hoppi</div>
+    <div class="subtitle">🎡 Turn the world around you into tiny stories.</div>
 
     <div class="location-info" id="locationInfo">
       <h3>📍 Your Location</h3>
@@ -65,7 +65,7 @@
     </div>
 
     <div class="task-container" id="taskContainer">
-      <h3>🎉 Let’s See What the Universe Has for You!</h3>
+      <h3>🪅 Let the day offer you a small surprise.</h3>
       <div class="task-text" id="taskText"></div>
       <div class="controls" id="feedbackButtons" style="display:none; justify-content:center;">
         <button class="btn btn-secondary" id="thumbUpBtn">👍</button>
@@ -84,7 +84,7 @@
     </div>
 
     <div class="upload-section" id="uploadSection">
-      <h3>📸 Capture Your Moment</h3>
+      <h3>🪄 Capture this tiny moment</h3>
       <div id="captureAlert" class="inline-alert" style="display:none"></div>
       <div class="media-type-selector" style="margin:20px 0">
         <button class="btn btn-secondary" id="photoBtn">📷 Photo</button>
@@ -134,7 +134,7 @@
       <!-- NEW: submit loader & answer directly under preview -->
       <div id="submitLoading" class="loading" style="display:none">
         <div class="spinner"></div>
-        <p style="color:#667eea;font-weight:bold">🧠 Hoppi is weaving your story...</p>
+        <p style="color:#667eea;font-weight:bold">Your moment’s being felt...</p>
       </div>
       <div id="submitAnswer" class="status" style="display:none"></div>
 
@@ -151,7 +151,7 @@
 
       <!-- Micro-Narrative Story Strip Section -->
       <div id="storySection" style="display:none; text-align:center; margin-top:30px;">
-        <h3>📖 Your Hoppi Story Unfolds!</h3>
+        <h3>🖌 Your Hoppi Story Unfolds!</h3>
         <p id="storyText" style="font-size:1.1em; color:#555; margin:10px 0;"></p>
 
         <div id="storyStrip" style="display:flex; gap:10px; overflow-x:auto; justify-content:center; margin-top:15px;"></div>
@@ -326,14 +326,14 @@
           else if(['restaurant','cafe','bar'].some(has)) type='restaurant';
           else if(['mall','shopping','market','retail','store','shop'].some(has)) type='mall';
 
-          if(type){ description=`Hey, you are in a ${type}. What are you up to?`; popup=`📍 You are in a ${type}`; }
-          else if(road){ description=`Hey, you are on ${road}. What are you up to?`; popup=`📍 You are on ${road}`; }
-          else if(neighborhood){ description=`Hey, you are near ${neighborhood}. What are you up to?`; popup=`📍 You are near ${neighborhood}`; }
+          if(type){ description=`Hey, you are in a ${type}. Let’s see what’s waiting to be noticed.`; popup=`📍 You are in a ${type}`; }
+          else if(road){ description=`Hey, you are on ${road}. Let’s see what’s waiting to be noticed.`; popup=`📍 You are on ${road}`; }
+          else if(neighborhood){ description=`Hey, you are near ${neighborhood}. Let’s see what’s waiting to be noticed.`; popup=`📍 You are near ${neighborhood}`; }
         }
         $('locationDescription').textContent=description;
         if(locationMarker){ locationMarker.bindPopup(popup).openPopup(); }
       }catch{
-        $('locationDescription').textContent="📍 Hey, you are here! What are you up to?";
+        $('locationDescription').textContent="📍 Hey, you are here! Let’s see what’s waiting to be noticed.";
         if(locationMarker){ locationMarker.bindPopup("📍 You are here!").openPopup(); }
       }
     }
@@ -456,7 +456,11 @@
 
     function showLoading(showIt){
       const d=$('loading'), p=d.querySelector('p');
-      const msgs=["🎲 Rolling the dice of destiny...","🌍 Finding your next adventure spot...","🧭 Calibrating your challenge compass...","🪄 Summoning your quest from the ether...","🚀 Brewing up something epic..."];
+      const msgs=["👀 Looking for something you might’ve missed...",
+      "🌥 Listening to what the day wants to show you...",
+      "📍 Placing you gently in your next tiny story...",
+      "🕵️ Finding a small mystery near you...",
+      "🔮 Let’s ask the world for a new little moment..."];
       if(showIt){ p.textContent=msgs[Math.floor(Math.random()*msgs.length)]; show(d,true); } else { show(d,false); restoreMapIfHidden(); }
     }
     function showStatus(message,type){ const s=$('status'); s.textContent=message; s.className=`status ${type}`; show(s,true); setTimeout(()=>show(s,false),5000); }

@@ -200,7 +200,8 @@ Rules:
 - One short verdict (<= 35 words).
 - Encouraging, specific, a little cheeky, a bit mean.
 - Assume success if ambiguous.
-- End with a nudge to do another task (no emojis/hashtags/bullets).
+- The task must include only ONE physical action — either take a photo, record sound, film a clip, or write one thought.
+- Never ask for two things. Never combine actions.
 - No quotes or meta.
 """
     try:
@@ -275,10 +276,12 @@ Nearby info: {nearby_hint}
 Variation: {variation_hint}
 Freshness: {freshness_hint}
 
-Write ONE short, fun, real-time challenge under 30 words.
+Write ONE real-time challenge (25–30 words) that includes a small reference to the current weather and light condition — like “it’s cold,” or “under the sun,” or “while it’s raining.”
 No emojis/hashtags. Avoid repetitive openings. No exact clock time. 
 Simple, 12-year-old-friendly, spontaneous, doable now with just a phone.
-Each challenge should feel like a tiny chapter in an unfolding story of discovery, not just a standalone act.
+Each challenge should invite the user to do *only one small action* — like take a photo, record ambient sound, take a few seconds clip or write one thought. 
+The weather and time should influence the tone.
+
 """
         # Write last prompt for debugging/QA (in writable place)
         os.makedirs(RESULTS_DIR, exist_ok=True)

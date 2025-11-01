@@ -32,25 +32,32 @@ def generate_micro_narrative(submissions):
 
     # 🧠 Detect off-topic or incoherent set
     unrelated = submissions_are_unrelated(submissions)
+
     if unrelated:
         narrative_hint = (
-            "The three moments seem unrelated. Instead of forcing a plot, "
-            "write a surreal, dream-like montage that finds poetic meaning in their randomness."
+            "These three submissions seem unrelated. Don’t try to force a plot. "
+            "Instead, create a playful or loosely connected snapshot that shows contrast or randomness — like flipping through someone’s curious day. "
+            "You can be a little surreal, but keep the tone light and clear."
         )
     else:
         narrative_hint = (
-            "These three moments form a loose sequence; write them as a short, connected story "
-            "about discovery or reflection."
+            "These three moments share a loose connection. Write a simple, grounded mini-story that links them together. "
+            "Keep it conversational — like someone casually describing what happened to a friend. "
+            "Avoid deep symbolism; focus on clarity, mood, and what the user might’ve experienced."
         )
 
     prompt = f"""
-You are Hoppi — a poetic storyteller.
+You are Hoppi — a micro-narrative storyteller.
 {narrative_hint}
 
-Write a poetic micro-narrative (under 120 words) that connects or reinterprets these 3 submissions.
-Then list 3 concise visual prompts (one per story beat) for image generation.
+Write a micro-narrative under 60 words that connects or reinterprets these 3 user submissions.
+Your tone should be light, clear, human and a bit thoughtful — but not poetic or abstract.
+Avoid metaphors unless very simple. No overly flowery or symbolic language.
+Focus on small observations, little shifts in mood, or changes in attention.
 
-Format output as JSON:
+Then generate 3 short visual prompts — one per moment — based on the story’s key scenes.
+
+Format your output as JSON:
 {{
   "story_text": "...",
   "beats": [{{"title":"...","prompt":"..."}}, ...]
@@ -69,12 +76,10 @@ Return ONLY JSON.
         )
         text_out = response.choices[0].message.content.strip()
 
-        # Try to parse JSON safely
         data = json.loads(text_out)
         story_text = data.get("story_text", "").strip()
         beats = data.get("beats", [])
 
-        # Handle off-topic fallback (no beats)
         if unrelated and not beats:
             beats = [
                 {"title": "Fragment I", "prompt": "abstract swirl of lights and motion blur"},
@@ -86,7 +91,6 @@ Return ONLY JSON.
 
     except Exception as e:
         print("[ERROR] Narrative text generation failed:", traceback.format_exc())
-        # Safe fallback
         story_text = "Three quiet moments stitched together — a small journey seen through curious eyes."
         beats = [
             {"title": "Scene 1", "prompt": "soft morning light over an urban corner"},
