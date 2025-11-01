@@ -101,14 +101,26 @@ def get_weather_hint(lat, lon):
         res.raise_for_status()
         data = res.json()
         weather_code = data["current_weather"]["weathercode"]
-        if weather_code in (0,1): return "It's sunny, suggest something social and outdoors."
-        if weather_code in (2,3,45): return "It's cloudy, suggest something cozy or introspective."
-        if weather_code in (51,61,80): return "It's rainy, suggest something under shelter or with rain gear."
-        if weather_code in (71,): return "It's snowy, suggest something fun with snow."
-        return "Weather unclear; suggest something adaptable."
+
+        # Broaden coverage
+        if weather_code in range(0, 2):  # 0,1
+            return "It's clear and sunny, great for being outdoors."
+        elif weather_code in range(2, 4):  # 2,3
+            return "It's partly cloudy — light and calm."
+        elif weather_code in range(45, 49):  # fog/mist
+            return "It's foggy or misty — soft light and quiet air."
+        elif weather_code in range(51, 68) or weather_code in range(80, 83):  # drizzle & rain
+            return "It's raining — suggest something cozy, reflective, or playful with water."
+        elif weather_code in range(71, 78) or weather_code in range(85, 87):  # snow
+            return "It's snowing — suggest something playful, gentle, or warm."
+        elif weather_code in range(95, 100):  # thunderstorm
+            return "There’s a storm or thunder — suggest something safe indoors."
+        else:
+            return "Weather unclear; suggest something adaptable."
     except Exception as e:
         print(f"[Weather Error] {e}")
-        return ""
+        return "Weather data unavailable; suggest something suitable for any condition."
+
 
 def get_nearby_places(lat, lon, radius=500):
     url = "https://overpass-api.de/api/interpreter"
@@ -276,7 +288,8 @@ Nearby info: {nearby_hint}
 Variation: {variation_hint}
 Freshness: {freshness_hint}
 
-Write ONE real-time challenge (25–30 words) that includes a small reference to the current weather and light condition — like “it’s cold,” or “under the sun,” or “while it’s raining.”
+Write ONE real-time challenge (25–30 words) that clearly includes the weather hint (“{weather_hint}”) and the current light condition ({period}). 
+For example, if it’s raining, the task should mention rain or wet surfaces directly.
 No emojis/hashtags. Avoid repetitive openings. No exact clock time. 
 Simple, 12-year-old-friendly, spontaneous, doable now with just a phone.
 Each challenge should invite the user to do *only one small action* — like take a photo, record ambient sound, take a few seconds clip or write one thought. 
