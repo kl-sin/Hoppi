@@ -68,59 +68,20 @@ Hoppi encourages people to:
 ---
 
 ## ⚡ Quick Start
+Requires **Python 3.10+** and a [Together AI](https://www.together.ai/) API key.
 
-### Prerequisites
-- Python **3.10+**
-- Git
-- A [Together AI](https://www.together.ai/) API key (required for AI features)
-- *(Optional)* OpenAI and Hugging Face keys for audio transcription / image captioning
-
-### Installation
 ```bash
-# Clone this repository
-git clone git@github.com:kl-sin/Hoppi.git
-cd Hoppi
-
-# Create and activate a virtual environment
-python3 -m venv .venv
-source .venv/bin/activate    # macOS/Linux
-.venv\Scripts\activate       # Windows
-
-# Install dependencies
+git clone git@github.com:kl-sin/Hoppi.git && cd Hoppi
+python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+
+# Add your key to a .env file (never commit it — it's gitignored)
+echo "TOGETHER_API_KEY=your_key_here" > .env
+
+python app.py    # → http://localhost:8000
 ```
 
-### Configuration
-Create a `.env` file in the project root:
-```bash
-TOGETHER_API_KEY=your_together_key_here
-OPENAI_API_KEY=your_openai_key_here     # optional — audio transcription
-HF_API_KEY=your_huggingface_key_here    # optional — image captioning
-```
-
-> ⚠️ Never commit `.env` — it's already in `.gitignore`. If a key is ever exposed, rotate it.
-
-### Running the App
-```bash
-python app.py
-```
-Then open 👉 `http://localhost:8000`
-
-> On Hugging Face Spaces the app writes to `/tmp` and reads the `PORT` env var automatically — no extra config needed.
-
----
-
-## 🌐 API Routes
-
-| Route | Method | Purpose |
-|-------|--------|---------|
-| `/` | GET | Main app (map + challenge UI) |
-| `/generate-task` | POST | Generate a context-aware challenge from `latitude`/`longitude` |
-| `/submit` | POST | Submit media/text, get judge feedback, trigger micro-narrative |
-| `/feedback` | POST | Log a 👍/👎 rating on a generated task |
-| `/feedback-logs` | GET | Browse logged feedback |
-| `/progress/<session_id>` | GET | Submission count & surprise-ready status |
-| `/download/<filename>` | GET | Retrieve an uploaded or generated file |
+> On Hugging Face Spaces the app writes to `/tmp` and reads `PORT` automatically — no extra config needed.
 
 ---
 
@@ -133,8 +94,6 @@ Hoppi/
 ├── micronarrative.py   # 3-submission story + image generation (FLUX)
 ├── templates/          # index.html (frontend)
 ├── assets/             # Logos & screenshots
-├── uploads/            # Captured media (sessions)
-├── outputs/ results/   # Feedback logs & debug prompts
 ├── tests/              # Test suite
 └── requirements.txt
 ```

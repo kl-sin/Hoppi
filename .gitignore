@@ -210,3 +210,13 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# macOS
+.DS_Store
+
+# Hoppi runtime data (app writes to /tmp; these are local artifacts)
+outputs/
+results/
+feedback_export/*
+!feedback_export/.gitkeep
+uploads/
