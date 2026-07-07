@@ -67,24 +67,6 @@ Hoppi encourages people to:
 
 ---
 
-## ⚡ Quick Start
-Requires **Python 3.10+** and a [Together AI](https://www.together.ai/) API key.
-
-```bash
-git clone git@github.com:kl-sin/Hoppi.git && cd Hoppi
-python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-
-# Add your key to a .env file (never commit it — it's gitignored)
-echo "TOGETHER_API_KEY=your_key_here" > .env
-
-python app.py    # → http://localhost:8000
-```
-
-> On Hugging Face Spaces the app writes to `/tmp` and reads `PORT` automatically — no extra config needed.
-
----
-
 ## 📂 Project Structure
 ```
 Hoppi/
