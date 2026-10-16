@@ -1,11 +1,8 @@
 import os, traceback, json, urllib.parse
-from together import Together
 
-# Initialize Together API client
-client = Together(api_key=os.getenv("TOGETHER_API_KEY", "").strip())
+# Resilient multi-model chat helper (handles 503s / empty output)
+from gentask import chat
 
-# Models
-TEXT_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo"
 # Images are generated via Pollinations (free, no API key) — see generate_story_images()
 
 
@@ -67,11 +64,7 @@ Return ONLY JSON.
 """
 
     try:
-        response = client.chat.completions.create(
-            model=TEXT_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        text_out = response.choices[0].message.content.strip()
+        text_out = chat(prompt).strip()
 
         # --- Safe JSON parsing ---
         try:

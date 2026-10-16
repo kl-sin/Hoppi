@@ -1,12 +1,10 @@
 import os, random, json, re
 from dotenv import load_dotenv
-from together import Together
+
+# Resilient multi-model chat helper (handles 503s / empty output)
+from gentask import chat
 
 load_dotenv()
-TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY", "").strip()
-client = Together(api_key=TOGETHER_API_KEY)
-
-MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo"
 
 def summarize_media(file_path, media_type):
     if not file_path:
@@ -127,18 +125,12 @@ Rules:
 """
 
     try:
-        print(f"[DEBUG] Sending judge prompt to Together API (model={MODEL})")
         print(f"[DEBUG] Prompt preview:\n{prompt[:200]}...\n")
-
-        response = client.chat.completions.create(
-            model=MODEL,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        text_out = response.choices[0].message.content.strip()
+        text_out = chat(prompt).strip()
         print("[DEBUG] Judge model response received:", text_out[:200], "...\n")
 
     except Exception as e:
-        print("[GEMMA ERROR]", e)
+        print("[JUDGE ERROR]", e)
         return "That was unexpected — but Hoppi loves surprises! Ready for another quick challenge?"
 
     # 🧹 Clean up and tighten
