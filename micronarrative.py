@@ -1,4 +1,4 @@
-import os, traceback, json, base64
+import os, traceback, json, urllib.parse
 from together import Together
 
 # Initialize Together API client
@@ -6,7 +6,7 @@ client = Together(api_key=os.getenv("TOGETHER_API_KEY", "").strip())
 
 # Models
 TEXT_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo"
-IMAGE_MODEL = "black-forest-labs/FLUX.1-schnell"  # supports image generation
+# Images are generated via Pollinations (free, no API key) — see generate_story_images()
 
 
 def submissions_are_unrelated(submissions):
@@ -106,69 +106,26 @@ Return ONLY JSON.
 
 def generate_story_images(beats):
     """
-    Create 3 AI-generated images for each story beat.
-    Converts base64 output from Together API into temporary files
-    served via /download/<filename>.
+    Build one AI-image URL per story beat using Pollinations
+    (free, no API key). The browser loads each URL directly and the
+    image is generated on demand — no server-side download needed.
     """
     image_urls = []
 
-    for b in beats:
+    for i, b in enumerate(beats):
         try:
-            img_prompt = f"{b['prompt']} | cinematic, natural light, detailed textures, poetic atmosphere"
-            response = client.images.generate(
-                model=IMAGE_MODEL,
-                prompt=img_prompt,
-                size="1024x1024",
-                steps=8
+            img_prompt = f"{b.get('prompt','')} | cinematic, natural light, detailed textures, poetic atmosphere"
+            encoded = urllib.parse.quote(img_prompt)
+            # `seed` keeps each beat's image stable/distinct; nologo removes watermark
+            url = (
+                f"https://image.pollinations.ai/prompt/{encoded}"
+                f"?width=1024&height=1024&nologo=true&seed={i}"
             )
-
-            print("[DEBUG RAW IMAGE RESPONSE]", response.__dict__)
-
-            data = getattr(response, "data", [])
-            if not data:
-                raise ValueError("Empty image response")
-
-            item = data[0]
-            image_bytes = None
-
-            # 🧩 Handle URL first, then base64 fallback
-            if hasattr(item, "url") and item.url:
-                image_urls.append({"title": b.get("title", ""), "url": item.url})
-                continue  # ✅ Together returned a hosted image URL
-
-            elif hasattr(item, "b64_json") and item.b64_json:
-                image_bytes = base64.b64decode(item.b64_json)
-
-            elif isinstance(item, dict):
-                if "url" in item and item["url"]:
-                    image_urls.append({"title": b.get("title", ""), "url": item["url"]})
-                    continue
-                elif "b64_json" in item and item["b64_json"]:
-                    image_bytes = base64.b64decode(item["b64_json"])
-
-
-            # 🖼️ Save image to /tmp
-            if image_bytes:
-                import uuid
-                filename = f"story_{uuid.uuid4().hex}.png"
-                path = f"/tmp/{filename}"
-                with open(path, "wb") as f:
-                    f.write(image_bytes)
-                image_url = f"/download/{filename}"
-            else:
-                image_url = "https://placekitten.com/512/512"
-
-            image_urls.append({
-                "title": b.get("title", ""),
-                "url": image_url
-            })
-
+            image_urls.append({"title": b.get("title", ""), "url": url})
         except Exception as e:
-            print(f"[ERROR] Image generation failed for {b.get('title','(unknown)')}: {e}")
-            image_urls.append({
-                "title": b.get("title", ""),
-                "url": "https://placekitten.com/512/512"
-            })
+            print(f"[ERROR] Image URL build failed for {b.get('title','(unknown)')}: {e}")
+            # picsum is a live placeholder (unlike the retired placekitten)
+            image_urls.append({"title": b.get("title", ""), "url": "https://picsum.photos/1024"})
 
     print("[DEBUG] Generated story images:", image_urls)
     return image_urls
