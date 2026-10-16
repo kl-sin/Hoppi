@@ -5,7 +5,7 @@ from together import Together
 client = Together(api_key=os.getenv("TOGETHER_API_KEY", "").strip())
 
 # Models
-TEXT_MODEL = "openai/gpt-oss-20b"
+TEXT_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo"
 IMAGE_MODEL = "black-forest-labs/FLUX.1-schnell"  # supports image generation
 
 

@@ -6,7 +6,7 @@ load_dotenv()
 TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY", "").strip()
 client = Together(api_key=TOGETHER_API_KEY)
 
-MODEL = "google/gemma-3n-E4B-it"
+MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo"
 
 def summarize_media(file_path, media_type):
     if not file_path:
