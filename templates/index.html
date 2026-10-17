@@ -570,6 +570,40 @@
       el.style.display = 'none';
     }
 
+    // Render the 3 story images into `storyStrip`.
+    // `storedImages` is the JSON string of [{title, url}, ...] (may be null).
+    // Images load ONE AT A TIME: Pollinations (the free image service)
+    // throttles concurrent/rapid requests, so loading all 3 at once makes
+    // 2 of them fail. Any image the free tier refuses falls back to a
+    // reliable placeholder so all three frames always fill.
+    function renderStoryStrip(storyStrip, storedImages) {
+      storyStrip.innerHTML = '';
+      if (!storedImages) return;
+      let scenes;
+      try { scenes = JSON.parse(storedImages); } catch (e) { return; }
+      const slots = scenes.map((scene, i) => {
+        const img = document.createElement('img');
+        img.alt = scene.title || '';
+        img.style.cssText =
+          'border-radius:12px;width:180px;min-height:120px;background:#eef;' +
+          'box-shadow:0 2px 10px rgba(0,0,0,0.2)';
+        storyStrip.appendChild(img);
+        return { img, url: scene.url, i };
+      });
+      (function loadNext(k) {
+        if (k >= slots.length) return;
+        const { img, url, i } = slots[k];
+        const advance = () => setTimeout(() => loadNext(k + 1), 1500);
+        img.onload  = () => { img.onerror = null; advance(); };
+        img.onerror = () => {
+          img.onerror = null;
+          img.src = `https://picsum.photos/seed/hoppi${i}/360`;
+          advance();
+        };
+        img.src = url;
+      })(0);
+    }
+
     function initializeStoryProgress() {
   const count = getCompletedCount();
   const storiesUnlocked = Math.floor(count / 3);
@@ -602,18 +636,7 @@
     ? storedText
     : `📖 You've unlocked ${storiesUnlocked} story part${storiesUnlocked > 1 ? 's' : ''}!`;
 
-  storyStrip.innerHTML = '';
-  if (storedImages) {
-    JSON.parse(storedImages).forEach(scene => {
-      const img = document.createElement('img');
-      img.src = scene.url;
-      img.alt = scene.title || '';
-      img.style.borderRadius = '12px';
-      img.style.width = '180px';
-      img.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-      storyStrip.appendChild(img);
-    });
-  }
+  renderStoryStrip(storyStrip, storedImages);
 }
 
     // Subtle success cue
@@ -1134,18 +1157,7 @@ if (newCount % 3 === 0) {
     ? storedText
     : `✨ Chapter ${unlockedNow} unlocked! ${unlockedNow * 3} tasks completed.`;
 
-  storyStrip.innerHTML = '';
-  if (storedImages) {
-    JSON.parse(storedImages).forEach(scene => {
-      const img = document.createElement('img');
-      img.src = scene.url;
-      img.alt = scene.title || '';
-      img.style.borderRadius = '12px';
-      img.style.width = '180px';
-      img.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-      storyStrip.appendChild(img);
-    });
-  }
+  renderStoryStrip(storyStrip, storedImages);
 
   storyStrip.style.display = 'flex';
   storyStrip.scrollIntoView({ behavior: 'smooth', block: 'center' });
